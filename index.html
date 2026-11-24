@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comedero inteligente · inicio</title>
+  <meta name="theme-color" content="#0F6E56">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="stylesheet" href="css/app.css?v=10">
+  <script defer src="js/firebase-config.js?v=10"></script>
+</head>
+<body class="inicio">
+  <header class="top">
+    <div class="marca"><span class="logo" aria-hidden="true"></span><div><h1>Comedero inteligente para gatos</h1><p class="sub">Tesis · app del dueño y comedero simulado</p></div></div>
+  </header>
+  <main class="lanzador">
+    <p class="intro">El sistema tiene dos partes, igual que en la tesis: la <b>app del dueño</b>, que va en el celular, y el <b>comedero</b>, que aquí se simula en tu computadora con la webcam como cámara. Las dos se comunican por la nube.</p>
+    <div class="tarjetas">
+      <a class="opcion" href="app.html">
+        <span class="op-tag">Celular · APK</span>
+        <h2>App del dueño</h2>
+        <p>Primer uso, registrar gatos con la cámara, servir ahora, horarios, historial y alertas.</p>
+      </a>
+      <a class="opcion" href="comedero.html">
+        <span class="op-tag">Computadora · webcam</span>
+        <h2>Comedero simulado</h2>
+        <p>ESP32 y ESP32-S3-CAM: PIR, red neuronal, dosificación, papel, tacho, LED RGB, pulsador, fallas y pines en vivo.</p>
+      </a>
+      <a class="opcion" href="demo.html">
+        <span class="op-tag">Una sola pantalla</span>
+        <h2>Demo completa</h2>
+        <p>Las dos partes juntas, para presentar desde una sola computadora.</p>
+      </a>
+    </div>
+    <div class="tarjeta como">
+      <h3>Cómo conectarlas</h3>
+      <p id="modo-con"></p>
+      <ol>
+        <li><b>En esta computadora, sin configurar nada:</b> abre el comedero en una pestaña y la app en otra. Se comunican solas.</li>
+        <li><b>App en el celular y comedero en la PC:</b> pega tu configuración de Firebase en <code>js/firebase-config.js</code> y publica la carpeta (GitHub Pages). El LEEME explica cada paso, también cómo sacar el APK con PWABuilder.</li>
+      </ol>
+    </div>
+  </main>
+  <script>
+    addEventListener('DOMContentLoaded', () => {
+      const ok = window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey;
+      document.getElementById('modo-con').innerHTML = ok
+        ? 'Firebase está configurado (código <b>' + (window.CODIGO_COMEDERO || '') + '</b>): la app y el comedero se encuentran desde cualquier lugar.'
+        : 'Firebase todavía no está configurado: la app y el comedero se conectan entre pestañas de este navegador.';
+    });
+  </script>
+</body>
+</html>

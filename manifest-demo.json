@@ -1,0 +1,37 @@
+{
+  "id": "./demo.html",
+  "name": "Comedero inteligente · demo",
+  "short_name": "Comedero demo",
+  "description": "Demo completa del comedero automático para gatos: la app del dueño y el comedero virtual (ESP32 + cámara) en una sola pantalla, con la cámara del celular.",
+  "start_url": "./demo.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f3ee",
+  "theme_color": "#0F6E56",
+  "lang": "es",
+  "categories": [
+    "lifestyle",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

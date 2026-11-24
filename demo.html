@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comedero inteligente · demo completa</title>
+  <meta name="theme-color" content="#0F6E56">
+  <link rel="manifest" href="manifest-demo.json">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="css/app.css?v=10">
+  <script>window.ROL = 'todo';</script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+  <script defer src="js/firebase-config.js?v=10"></script>
+  <script defer src="js/comedero.js?v=10"></script>
+  <script defer src="js/vision.js?v=10"></script>
+  <script defer src="js/nube.js?v=10"></script>
+  <script defer src="js/sim.js?v=10"></script>
+  <script defer src="js/dibujos.js?v=10"></script>
+  <script defer src="js/app.js?v=10"></script>
+  <script defer src="js/presentacion.js?v=10"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="marca"><span class="logo" aria-hidden="true"></span><div><h1>Comedero inteligente · demo completa</h1><p class="sub">App del dueño y comedero simulado en una sola pantalla</p></div></div>
+    <nav class="pestanas" aria-label="Vista"><button data-lado="app" class="on">App del dueño</button><button data-lado="sim">Comedero simulado</button></nav>
+    <a class="volver" href="index.html">Inicio</a>
+  </header>
+  <main class="grid">
+    <section id="lado-app" class="lado on" aria-label="App del dueño">
+      <p class="etiqueta-lado"><b>Lo que ve el dueño:</b> solo esta app, en su celular.</p>
+      <div class="telefono">
+        <div class="tel-barra"><span id="tel-hora">--:--</span><span id="tel-con">Conectado</span></div>
+        <div id="app-vista" class="tel-vista"></div>
+        <nav id="app-nav" class="tel-nav" aria-label="Secciones de la app">
+          <button data-vista="inicio" class="on"><span class="ic ic-casa"></span>Inicio</button>
+          <button data-vista="gatos"><span class="ic ic-gato"></span>Mis gatos</button>
+          <button data-vista="historial"><span class="ic ic-lista"></span>Historial</button>
+          <button data-vista="ajustes"><span class="ic ic-ajustes"></span>Ajustes</button>
+        </nav>
+      </div>
+    </section>
+    <!-- ================= COMEDERO SIMULADO ================= -->
+    <section id="lado-sim" class="lado" aria-label="Comedero simulado">
+      <div class="aviso-dentro"><b>Por dentro del comedero (simulado).</b> El dueño <b>no</b> ve esta parte: en la realidad es el equipo físico con el ESP32, la cámara, los motores y los sensores. Está aquí para probar y presentar cómo funciona.</div>
+      <div class="sim-grid">
+
+        <article class="card guia-card">
+          <header><h2>Tu primera demo</h2><span class="mini" id="guia-txt"></span></header>
+          <div class="guia" id="guia"></div>
+          <div class="barra-guia"><i id="guia-barra"></i></div>
+        </article>
+
+        <article class="card escenarios-card">
+          <header><h2>Escenarios de un clic</h2><button id="esc-parar" style="display:none">Detener</button></header>
+          <p class="mini">Cada escenario hace solo los pasos y te narra qué hace el ESP32 y la cámara. Mira el LED, el mecanismo, los pines y la app mientras corre.</p>
+          <div class="esc-botones" id="esc-botones"></div>
+          <div class="narracion" id="narracion"></div>
+        </article>
+
+        <article class="card camara">
+          <header><h2>Cámara ESP32-S3-CAM (tu webcam)</h2><span id="cam-estado" class="pill">Apagada</span></header>
+          <div class="video-caja">
+            <video id="video" playsinline muted></video>
+            <div id="caja-obj" class="caja-obj" data-txt=""></div>
+            <div id="roi" class="roi" title="Zona de comida: después de cada comida la cámara mira aquí si quedaron restos sobre el papel" data-txt="zona de comida"></div>
+            <div class="video-tapa" id="video-tapa">Enciende la webcam para que haga de cámara del comedero</div>
+            <div class="badges">
+              <span id="b-pir" class="badge">PIR</span>
+              <span id="b-led" class="badge">LED noche</span>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <button id="btn-webcam" class="primario">Encender webcam</button>
+            <button id="btn-cambiar">Cambiar cámara</button>
+            <button id="btn-pir">Simular movimiento (PIR)</button>
+          </div>
+          <label class="mini"><input type="checkbox" id="chk-pirweb" checked> Usar el movimiento de la webcam como PIR. Con el fondo registrado, solo cuenta lo que es distinto del fondo (el gato). Para la demo: si vas a estar frente a la webcam, registra el fondo contigo sentado</label>
+          <p class="mini" id="cam-modelo">Red neuronal: sin cargar</p>
+          <p class="mini esp-info" id="cam-esp"></p>
+          <div id="cam-pred" class="pred"></div>
+          <div class="medidores">
+            <div><span>PIR (movimiento)</span><div class="barra"><i id="m-pir"></i></div></div>
+            <div><span>Brillo</span><div class="barra"><i id="m-brillo"></i></div></div>
+          </div>
+          <div id="cam-simular" class="fila-botones"></div>
+          <ul id="cam-log" class="log-mini"></ul>
+        </article>
+
+        <article class="card panel">
+          <header><h2>Panel del equipo</h2></header>
+          <div class="panel-fila">
+            <div class="led-caja"><div id="led" class="led verde"></div><span>LED RGB</span></div>
+            <div class="led-caja"><div id="zumb" class="zumb">Zumbador</div><label class="mini"><input type="checkbox" id="chk-sonido"> Sonido</label></div>
+            <div class="led-caja">
+              <button id="pulsador" class="pulsador" aria-label="Pulsador del panel"><svg viewBox="0 0 36 36"><circle id="pul-anillo" cx="18" cy="18" r="16" /></svg></button>
+              <span>Pulsador</span>
+            </div>
+          </div>
+          <p class="mini" id="led-texto"></p>
+          <ul class="led-leyenda" id="led-leyenda">
+            <li data-c="verde"><i style="background:#1d9e75"></i>Verde fijo: listo, en espera</li>
+            <li data-c="azul"><i style="background:#378add"></i>Azul fijo: ciclo en curso (sirve, presenta, el gato come, limpia)</li>
+            <li data-c="azul-i"><i class="parp" style="background:#378add"></i>Azul intermitente: sin Wi-Fi, usa lo guardado</li>
+            <li data-c="amarillo"><i style="background:#ef9f27"></i>Amarillo fijo: un aviso (poco alimento, papel o tacho por llenarse)</li>
+            <li data-c="rojo"><i class="parp" style="background:#e24b4a"></i>Rojo intermitente: falla o mantenimiento, con zumbador</li>
+            <li data-c="blanco"><i style="background:#f2f2ee"></i>Blanco breve: el pulsador aceptó la pulsación</li>
+          </ul>
+          <p class="mini">Pulsación corta: suma una porción (sale a los 3 s). Pulsación larga de 3 s: silencia y confirma el mantenimiento.</p>
+          <p id="cr-texto" class="aviso-cr"></p>
+        </article>
+
+        <article class="card estados">
+          <header><h2>Máquina de estados (Tabla 7.5)</h2></header>
+          <div id="estados" class="chips"></div>
+          <p id="estado-detalle" class="detalle"></p>
+        </article>
+
+        <article class="card mecanismo">
+          <header><h2>Mecanismo</h2></header>
+          <div class="meca">
+            <div class="tolva">
+              <span class="mini">Tolva</span>
+              <div class="tolva-tubo"><i id="tolva-nivel"></i></div>
+              <span id="tolva-txt" class="mini"></span>
+            </div>
+            <div class="meca-der">
+              <div class="sens">
+                <span><b id="s-servo" class="foco"></b> Servo MG996R <em id="s-servo-txt"></em></span>
+                <span><b id="s-tcrt" class="foco"></b> TCRT5000 del disco</span>
+                <span><b id="s-barrera" class="foco"></b> Barrera IR del ducto</span>
+              </div>
+              <div class="papel">
+                <div class="papel-et"><span>Rodillo A</span><span id="papel-txt"></span><span>Rodillo B → tacho</span></div>
+                <div class="papel-pista"><i id="comida" class="comida"></i></div>
+                <p class="mini" id="motores"></p>
+              </div>
+              <div class="tacho">
+                <span class="mini">Tacho de residuos</span>
+                <div class="barra"><i id="tacho-nivel"></i></div>
+                <span id="tacho-txt" class="mini"></span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card reloj">
+          <header><h2>Reloj de la simulación</h2></header>
+          <div class="reloj-fila">
+            <span id="reloj" class="reloj-hora">--:--</span>
+            <label>Velocidad
+              <select id="vel">
+                <option value="1" selected>Tiempo real (×1)</option>
+                <option value="10">Rápido ×10 (1 min = 6 s)</option>
+                <option value="60">Muy rápido ×60 (1 min = 1 s)</option>
+                <option value="300">×300</option>
+                <option value="600">×600</option>
+              </select>
+            </label>
+          </div>
+          <p class="mini" id="reloj-nota"></p>
+          <div class="fila-botones">
+            <button id="btn-real">Volver a la hora real</button>
+            <button id="btn-1h">Pasar 1 hora</button>
+            <button id="btn-horario" class="primario">Ir al próximo horario</button>
+            <button id="btn-7dias">Pasar 7 días</button>
+            <button id="btn-corte">Corte de energía</button>
+          </div>
+          <p class="mini">En tiempo real, una comida completa dura unos 6 minutos: servir (2 a 4 s), acercar la comida (3 s), comer (hasta 5 min después de que el gato se va), revisar restos y renovar el papel (unos 10 s). Para probar más rápido usa ×60; los escenarios de un clic lo hacen solos y al terminar vuelven a la hora real.</p>
+          <div class="fila-botones"><button id="btn-cero" class="peligro">Empezar de cero</button></div>
+        </article>
+
+        <article class="card fallas">
+          <header><h2>Probar fallas</h2></header>
+          <div class="toggles">
+            <label><input type="checkbox" data-falla="atascoDisco"> Atasco del disco</label>
+            <label><input type="checkbox" data-falla="arco"> Arco de croquetas (no caen)</label>
+            <label><input type="checkbox" id="f-camara"> Cámara no responde</label>
+            <label><input type="checkbox" data-falla="sinInternet"> Sin internet</label>
+            <label><input type="checkbox" data-falla="atascoPapel"> Atasco del papel</label>
+            <label><input type="checkbox" data-falla="papelFlojo"> Papel flojo al cambiar el rollo</label>
+            <label><input type="checkbox" data-falla="inventario"> Sensor de nivel desajustado <span class="mini">(se nota con menos de 1 kg: usa "Dejar 700 g")</span></label>
+          </div>
+          <h3>Acciones del dueño (con las manos)</h3>
+          <div class="fila-botones">
+            <button data-accion="rellenarTolva">Rellenar tolva</button>
+            <button data-accion="tolvaMitad">Dejar 700 g</button>
+            <button data-accion="tolvaCasiVacia">Dejar 260 g</button>
+            <button data-accion="tolvaVacia">Vaciar tolva</button>
+            <button data-accion="rolloPorAcabarse">Rollo por acabarse</button>
+            <button data-accion="acabarPapel">Acabar el papel</button>
+            <button data-accion="ponerRollo">Poner rollo nuevo</button>
+            <button data-accion="llenarTacho">Llenar tacho</button>
+            <button data-accion="vaciarTacho">Vaciar tacho</button>
+          </div>
+        </article>
+
+
+        <article class="card pines-card">
+          <header><h2>Componentes y pines (placa rev 3.0)</h2><span class="mini">señales simuladas en vivo</span></header>
+          <div class="tabla-scroll"><table class="pines"><thead><tr><th>Componente</th><th>Pin</th><th>Señal ahora</th></tr></thead><tbody id="pines"></tbody></table></div>
+        </article>
+
+        <article class="card consola">
+          <header><h2>UART ESP32 ↔ cámara</h2></header>
+          <ul id="uart" class="mono"></ul>
+        </article>
+
+        <article class="card eventos">
+          <header><h2>Lo que hace el ESP32</h2></header>
+          <ul id="eventos" class="eventos-lista"></ul>
+          <details>
+            <summary>Ver la nube (rutas de la Tabla 7.6)</summary>
+            <pre id="nube" class="mono"></pre>
+          </details>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

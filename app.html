@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comedero</title>
+  <meta name="theme-color" content="#0F6E56">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="css/app.css?v=10">
+  <script>window.ROL = 'app';</script>
+  <script defer src="js/firebase-config.js?v=10"></script>
+  <script defer src="js/comedero.js?v=10"></script>
+  <script defer src="js/nube.js?v=10"></script>
+  <script defer src="js/dibujos.js?v=10"></script>
+  <script defer src="js/app.js?v=10"></script>
+</head>
+<body class="solo-app">
+  <div class="telefono">
+        <div class="tel-barra"><span id="tel-hora">--:--</span><span id="tel-con">Conectado</span></div>
+        <div id="app-vista" class="tel-vista"></div>
+        <nav id="app-nav" class="tel-nav" aria-label="Secciones de la app">
+          <button data-vista="inicio" class="on"><span class="ic ic-casa"></span>Inicio</button>
+          <button data-vista="gatos"><span class="ic ic-gato"></span>Mis gatos</button>
+          <button data-vista="historial"><span class="ic ic-lista"></span>Historial</button>
+          <button data-vista="ajustes"><span class="ic ic-ajustes"></span>Ajustes</button>
+        </nav>
+  </div>
+</body>
+</html>
