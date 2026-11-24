@@ -6,8 +6,15 @@ const { abrir } = require('./comun.js');
   await T.webcam();
   // ---- A1. Primer uso completo (5 pasos) ----
   if (T.enOnboarding) {
-    await page.fill('#ob-nombre', 'Franco'); await T.clic('[data-act="ob-siguiente"]');
-    await T.clic('[data-act="ob-siguiente"]');                           // conectar
+    // cuenta nueva y conexión del comedero (como un cliente)
+    await T.clic('[data-act="cuenta-ir"][data-p="crear"]');
+    await page.fill('#cu-nombre', 'Franco'); await page.fill('#cu-correo', 'franco@gmail.com');
+    await page.fill('#cu-clave', 'gatitos123'); await page.fill('#cu-clave2', 'gatitos123');
+    await T.clic('[data-act="cuenta-crear"]'); await page.waitForTimeout(600);
+    const codigo = await T.ev(() => document.getElementById('codigo-equipo').textContent);
+    await page.fill('#ob-codigo', codigo); await page.fill('#ob-wifi', 'MiCasa_2.4G'); await page.fill('#ob-wifiClave', 'clave12345');
+    await T.clic('[data-act="ob-conectar"]'); await page.waitForTimeout(600);
+    await T.clic('[data-act="ob-siguiente"]');
     await T.clic('[data-act="fondo"]');
     const fondo = await T.esperar(() => (window.nube.instalacion || {}).fondoOk, 70000);
     await T.clic('[data-act="plato"]');
@@ -21,7 +28,7 @@ const { abrir } = require('./comun.js');
     await T.clic('[data-act="modo"][data-m="horario"]');
     await T.clic('[data-act="ob-fin"]');
     const fin = await T.ev(() => ({ act: window.nube.config.horariosActivos, inicio: !!document.querySelector('#app-vista .hero') }));
-    T.ok('Primer uso: fondo, plato, gato y modo; termina en Inicio', fondo && plato && g1 && fin.act && fin.inicio, JSON.stringify(fin));
+    T.ok('Primer uso: cuenta, conexión, fondo, papel, gato y modo; termina en Inicio', fondo && plato && g1 && fin.act && fin.inicio, JSON.stringify(fin));
   } else T.ok('Primer uso (ya hecho en este perfil)', true);
 
   // ---- A2. Segundo gato desde Mis gatos ----

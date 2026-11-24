@@ -1,18 +1,20 @@
 # Reporte de simulaciones del comedero
 
-Fecha: 23/11/2026, 11:30 p. m. (versión 11: todos los modos probados como usuario, con las fallas que encontró Franco corregidas)
+Fecha: 24/11/2026 (versión 13: cuenta del dueño, registro desde el celular y cámara dormida en la ventana del horario)
 
-**Resultado: 237 de 237 comprobaciones correctas**, sin errores de JavaScript. Además, 900 corridas al azar de la lógica (36 000 acciones) y 6 corridas al azar en Chrome (1 039 acciones de usuario) sin romper ninguna regla.
+**Resultado: 280 de 280 comprobaciones correctas**, sin errores de JavaScript. Además, 900 corridas al azar de la lógica (36 000 acciones) y 7 corridas al azar en Chrome (1 214 acciones de usuario) sin romper ninguna regla.
 
 | Bloque | Casos | Correctos |
 |---|---|---|
-| Lógica del ESP32 (`test_casos.js`) | 80 | 80 |
+| Lógica del ESP32 (`test_casos.js`) | 87 | 87 |
 | Pruebas básicas (`test_comedero.js`) | 26 | 26 |
 | Visión (`test_vision.js`) | 18 | 18 |
 | Conexión app ↔ comedero (`test_nube.js`) | 21 | 21 |
+| Cuenta del dueño, local y Firebase simulado (`test_cuenta.js`) | 12 | 12 |
 | Escenarios de un clic en Chrome (`demo.html`) | 12 | 12 |
 | Todos los modos como usuario en Chrome, desde cero (`pruebas/navegador`, partes A–E) | 62 | 62 |
-| Acciones al azar en Chrome ("mono", 6 semillas × 3 reglas) | 18 | 18 |
+| Un cliente nuevo en el celular: cuenta, conexión, cámara, gato y Mi cuenta (parte G) | 21 | 21 |
+| Acciones al azar en Chrome ("mono", 7 semillas × 3 reglas) | 21 | 21 |
 
 ## 1. Lógica del ESP32
 
@@ -132,6 +134,18 @@ Las acciones al azar incluyen ahora cambiar de modo, que llegue un gato en modo 
 11. En modo libre, un gato nunca come dos veces dentro del tiempo mínimo entre comidas.
 
 Además se comprobó que, después de arreglar todas las fallas, el equipo **siempre vuelve a la espera**.
+
+### J. Horario con la cámara dormida entre visitas (v13)
+
+Antes, durante el tiempo de espera del horario (30 min) la cámara quedaba encendida todo el rato. Ahora mira 20 s al abrir la ventana (por si el gato ya espera), duerme, y cada vez que el PIR ve movimiento despierta y mira mientras haya movimiento y 30 s más.
+
+- ✔ Nadie llega: la cámara solo estuvo encendida 20 s de toda la ventana, y la ración queda omitida
+- ✔ El gato ya esperaba al abrir la ventana: lo reconoce en el primer vistazo
+- ✔ El gato llega a mitad de la ventana: el PIR despierta la cámara y se le sirve (2 despertares, 22.6 s encendida)
+- ✔ Pasa alguien sin gato: mira 30 s y vuelve a dormir; luego llega el gato y come (3 despertares)
+- ✔ Mientras haya movimiento sigue mirando (no se apaga a los 30 s)
+- ✔ La cámara no responde al abrir la ventana: alerta y ración por defecto según el ajuste
+- ✔ La cámara se muere mientras duerme: se detecta cuando el PIR la despierta
 
 ## 2. Visión por computadora
 
@@ -283,6 +297,26 @@ Chrome automático con `demo.html`, **desde un navegador limpio**. La webcam es 
 | 4 | 169 | 0 | ✔ |
 | 5 | 183 | 0 | ✔ |
 | 6 | 182 | 0 | ✔ |
+| 7 | 175 | 0 | ✔ |
+
+### Un cliente nuevo usa la app en el celular (v12, parte G)
+
+Chrome en tamaño celular (390 × 844, pantalla táctil), desde un navegador limpio, tocando como una persona:
+- ✔ Al abrir: "Crear cuenta" y "Ya tengo cuenta", sin el menú de abajo
+- ✔ Crear cuenta avisa: nombre vacío, correo inválido, contraseña corta y contraseñas distintas; "Mostrar" deja ver la contraseña
+- ✔ Cuenta creada → "Conecta tu comedero": rechaza un código mal escrito, el código de otro comedero y una clave de Wi-Fi corta; con el código de la etiqueta se conecta
+- ✔ "Prepara la cámara": dice que está apagada, la enciende desde la app y muestra lo que ve la cámara EN VIVO
+- ✔ Registrar el fondo (con avance e imagen) y calibrar el papel limpio
+- ✔ Registrar a Lulu viendo la cámara en la app mientras toma las 45 fotos
+- ✔ Empezar → Inicio con "Hola, Franco"; servir 24 g desde la app
+- ✔ Mi cuenta: nombre, correo y código; cambiar nombre; cambiar contraseña (rechaza la actual equivocada)
+- ✔ Cerrar sesión e iniciar sesión: avisa contraseña vieja, correo sin cuenta y "olvidé"; entra con Enter aunque el correo tenga mayúsculas o espacios
+- ✔ Recargar la página: la sesión sigue abierta
+- ✔ Otra persona de la casa crea su cuenta: no se repiten correos y entra directo al comedero ya configurado
+- ✔ Eliminar cuenta: pide la contraseña y después ya no se puede entrar
+- ✔ "Ver la demo sin cuenta" sigue funcionando; nada se sale de la pantalla del celular; 0 errores de JavaScript
+
+`test_cuenta.js` prueba lo mismo sin navegador, con la cuenta local y con un Firebase Authentication simulado (mismos códigos de error que el real): 12 de 12. Además verifica que la contraseña no se guarde, solo su huella PBKDF2-SHA256 con sal.
 
 ## 5. Problemas que encontraron las simulaciones (y ya están corregidos)
 
@@ -321,15 +355,21 @@ Chrome automático con `demo.html`, **desde un navegador limpio**. La webcam es 
 | La revisión de restos podía dar "restos" por un temblor de 1 píxel de la cámara | Cada píxel se compara con sus vecinos en la foto del papel limpio |
 | Los dibujos mostraban un plato, pero en el prototipo la comida cae sobre el papel | Dibujos del mecanismo real (papel sobre la plataforma, rodillos, raspador, tacho y renovación); los textos dicen "papel" y "zona de comida", y los mensajes UART pasan a REVISAR y CALPAPEL |
 
+| La app no tenía cuenta: el correo estaba desactivado y no se podía "registrar" como un cliente | Crear cuenta, iniciar y cerrar sesión, olvidé mi contraseña, Mi cuenta (nombre, contraseña, eliminar) y vincular el comedero por su código; con Firebase Authentication si está configurado |
+| En el celular, al registrar el fondo o el gato no se veía lo que veía la cámara (estaba en la otra pestaña) | La app muestra la cámara EN VIVO mientras registra, y la enciende o cambia de cámara desde ahí |
+| Después de entrar con tu cuenta, la app volvía a la última pantalla (Ajustes) | Siempre vuelve a Inicio |
+| Si la nube y la cuenta cargaban Firebase a la vez, se podía cargar dos veces | Cada script de Firebase se carga una sola vez |
+
 
 ## 6. Cómo repetir las pruebas
 
 ```
 node pruebas/test_comedero.js      # 26 pruebas básicas
-node pruebas/test_casos.js         # 80 casos + 30 corridas al azar
+node pruebas/test_casos.js         # 87 casos + 30 corridas al azar
 CORRIDAS=150 SEMILLA=777 node pruebas/test_casos.js   # más corridas al azar
 node pruebas/test_vision.js        # 18 casos de visión
 node pruebas/test_nube.js          # 21 casos de conexión (pestañas y Firebase)
+node pruebas/test_cuenta.js        # 12 casos de la cuenta del dueño
 ```
 Las pruebas en Chrome como usuario están en `pruebas/navegador` (ver su LEEME_PRUEBAS.md).
 Solo necesitas Node.js (https://nodejs.org).

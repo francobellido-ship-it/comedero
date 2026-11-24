@@ -29,6 +29,17 @@
   setInterval(() => { try { localStorage.setItem(CLAVE_APP, JSON.stringify(app)); } catch (e) { /* */ } }, 2000);
   nube.config.horariosActivos = !!app.onboarding;
 
+  // ---------- Cuenta del dueño (js/cuenta.js) ----------
+  let cuenta = window.CuentaDueno.crear(ROL);
+  let cuentaLista = cuenta.modo === 'local';
+  let pantallaCuenta = 'inicio', formCuenta = {}, errCuenta = '', okCuenta = '', ocupadoCuenta = false, cuentaPanel = '';
+  cuenta.listo.then(() => { cuentaLista = true; renderApp(true); }).catch(() => {
+    cuenta = new window.CuentaDueno._CuentaLocal(ROL); cuentaLista = true;
+    toast('Sin conexión con Firebase: la cuenta se guarda en este celular'); renderApp(true);
+  });
+  const usuario = () => (app.invitado ? { nombre: app.nombre || '', invitado: true } : cuentaLista ? cuenta.actual() : null);
+  const nombreDueno = () => { const u = usuario(); return (u && u.nombre) || app.nombre || ''; };
+
   let vista = 'inicio', porcionesApp = 1, registrando = null, probando = null, nuevoGato = { nombre: '', racionG: 24 };
   let ultimoHTML = '', syncVisto = { v: undefined, t: performance.now() }, vioComedero = false;
 
@@ -99,7 +110,7 @@
     return `<div class="tarjeta"><h4>¿Cuándo come?</h4><div class="modos">
       <button data-act="modo" data-m="horario" class="${!lib ? 'on' : ''}"><b>A sus horas</b><span>${c.horarios.join(' · ')}</span></button>
       <button data-act="modo" data-m="libre" class="${lib ? 'on' : ''}"><b>Cuando llegue</b><span>cada ${horas(c.libreIntervaloMin || 120)} como mínimo, hasta ${c.libreMaxDia || 4} al día</span></button></div>
-      <p class="mini">${lib ? 'Cuando tu gato se acerca, la cámara lo reconoce y, si ya pasó el tiempo mínimo, le sirve.' : 'A cada hora, la cámara espera a tu gato y le sirve cuando lo reconoce.'} También puedes servir aquí abajo o con el botón del comedero (cada toque = 12 g).</p></div>`;
+      <p class="mini">${lib ? 'Cuando tu gato se acerca, la cámara lo reconoce y, si ya pasó el tiempo mínimo, le sirve.' : `A cada hora se abre un tiempo de espera de ${c.esperaMin || 30} min: cuando tu gato se acerca, el sensor de movimiento despierta la cámara, lo reconoce y le sirve.`} También puedes servir aquí abajo o con el botón del comedero (cada toque = 12 g).</p></div>`;
   }
 
   // ======================= VISTAS =======================
@@ -111,6 +122,7 @@
     animar = true; renderApp(true); vistaEl.scrollTop = 0;
   }
   function renderApp(forzar) {
+    if (!usuario()) { $('#app-nav').style.display = 'none'; pintar(htmlCuenta(), forzar); return; }
     if (!app.onboarding) { $('#app-nav').style.display = 'none'; pintar(htmlBienvenida(), forzar); return; }
     $('#app-nav').style.display = '';
     pintar(vista === 'inicio' ? htmlInicio() : vista === 'gatos' ? htmlGatos() : vista === 'historial' ? htmlHistorial() : htmlAjustes(), forzar);
@@ -147,9 +159,11 @@
     const reloj = hhmm(ahoraSim()) + (est.vel > 1 ? ` · ×${est.vel}` : est.horaReal === false ? ' · hora simulada' : '');
     if ($('#tel-hora').textContent !== reloj) $('#tel-hora').textContent = reloj;
     $('#tel-con').textContent = desconectado() ? 'Comedero sin conexión' : 'Comedero conectado';
-    if (!app.onboarding) { actualizarRegistro(); actualizarBienvenidaDinamica(); return; }
+    if (!usuario()) return;
+    if (!app.onboarding) { actualizarRegistro(); actualizarFondo(); actualizarBienvenidaDinamica(); return; }
     if (vista === 'inicio' || vista === 'historial') renderApp(false);
-    if (vista === 'gatos') { actualizarRegistro(); actualizarGatosDinamico(); actualizarPrueba(); actualizarAjustesDinamico(); }
+    if (vista === 'gatos') { actualizarRegistro(); actualizarFondo(); actualizarGatosDinamico(); actualizarPrueba(); actualizarAjustesDinamico(); }
+    if (vista === 'ajustes') actualizarFondo();
     if (vista === 'ajustes') actualizarAjustesDinamico();
   }
   setInterval(actualizarApp, 400);
@@ -180,7 +194,7 @@
     const activas = (nube.alertas || []).filter((a) => a.activa);
     const comidas = (nube.historial || []).filter((h) => ['comida', 'omitida', 'visita'].includes(h.tipo)).slice(0, 4);
     let fecha = new Date(ahoraSim()).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' }); fecha = fecha.charAt(0).toUpperCase() + fecha.slice(1);
-    let h = `<div class="saludo-fila"><div><p class="saludo">Hola${app.nombre ? ', ' + esc(app.nombre) : ''}</p><p class="mini fecha">${esc(fecha)}</p></div>${Dibujos.avatar(app.nombre || 'Tú', null, 38)}</div>` + bannerConexion();
+    let h = `<div class="saludo-fila"><div><p class="saludo">Hola${nombreDueno() ? ', ' + esc(nombreDueno()) : ''}</p><p class="mini fecha">${esc(fecha)}</p></div>${Dibujos.avatar(nombreDueno() || 'Tú', null, 38)}</div>` + bannerConexion();
     const sub = e.estado === 'ESPERA' ? (esLibre() ? 'Modo libre: le sirvo cuando llegue tu gato' : 'Próxima comida a las ' + proximoHorario()) : (e.detalle || '');
     h += `<div class="hero hero-${led.color}">${Dibujos.escena(e.estado || 'INICIO')}<div class="hero-txt"><span class="punto ${led.parpadeo ? 'parpadeo' : ''}" style="background:${COLOR_LED[led.color] || '#888'}"></span><div><b>${esc(TITULO[e.estado] || 'Conectando…')}</b><div class="mini">${esc(sub)}</div></div></div></div>`;
     activas.forEach((a) => {
@@ -236,7 +250,7 @@
     if (!fondoOk) {
       h += `<div class="tarjeta destacada"><h4>Paso 1 · Lo que ve la cámara sin gato</h4>
         <p class="mini">Antes de registrar gatos, la cámara necesita ver el lugar del comedero <b>sin gato</b>, tal como se ve siempre. Así sabe qué es "no hay nadie". Aleja a tu gato de la cámara y toca el botón. Tarda unos 30 s.</p>
-        <div class="fila" style="border:0"><div>Fondo vacío<div class="t2" id="aj-fondo">Sin registrar</div></div><button class="primario" data-act="fondo">Registrar el fondo</button></div></div>`;
+        <div class="fila" style="border:0"><div>Fondo vacío<div class="t2" id="aj-fondo">Sin registrar</div></div><button class="primario" data-act="fondo">Registrar el fondo</button></div><div id="fondo-zona"></div></div>`;
     } else {
       h += `<div class="fila"><div>Fondo vacío<div class="t2" id="aj-fondo"><span class="ok">Registrado</span></div></div><button data-act="fondo">Volver a registrar</button></div>`;
     }
@@ -324,8 +338,26 @@
     } else if (desconectado()) html = `<div class="alerta aviso">El comedero no está conectado. La orden se enviará cuando se conecte.</div>`;
     else if (!cm.webcam) html = `<div class="alerta aviso">La cámara del comedero está apagada. Enciende la webcam en la página del comedero.</div>`;
     else html = `<p class="mini">Enviando la orden al comedero…</p><div class="progreso"><i style="width:3%"></i></div>`;
-    if (zona && zona.innerHTML !== html) zona.innerHTML = html;
+    // Mientras registra, la app muestra lo que ve la cámara del comedero (para saber a dónde apuntar)
+    if (registrando || /reg-vivo|progreso/.test(html)) html = htmlVista(true) + html;
+    if (zona && zona.dataset.h !== html) { zona.dataset.h = html; const t = document.createElement('template'); t.innerHTML = html; if (zona.childNodes.length) morfar(zona, t.content); else zona.innerHTML = html; }
   }
+  // Registro del fondo: imagen en vivo y avance (en el primer uso, Mis gatos y Ajustes)
+  let fondoPedido = 0, fondoVioReg = false, verAuto = 0;
+  function actualizarFondo(siempre) {
+    const zona = vistaEl.querySelector('#fondo-zona'); if (!zona) return;
+    const cm = camInfo(), inst = nube.instalacion || {};
+    let html = '';
+    const regFondo = cm.reg && cm.reg.id === 0;
+    if (regFondo) fondoVioReg = true;
+    if (regFondo) html = `<p class="mini">Aprendiendo el fondo… ${cm.reg.n}/${cm.reg.total || 45} fotos. Que no haya ningún gato a la vista.</p><div class="progreso"><i style="width:${Math.round((cm.reg.n / (cm.reg.total || 45)) * 100)}%"></i></div>`;
+    else if (fondoPedido && fondoVioReg && performance.now() - fondoPedido < 120000 && inst.fondoOk) html = '<p class="ok mini">Fondo registrado. Ahora calibra el papel limpio.</p>';
+    if (!cm.webcam && (siempre || fondoPedido)) html = `<div class="alerta aviso">La cámara del comedero está apagada.${CTX.cam ? ' <button data-act="ob-webcam">Encender la cámara</button>' : ''}</div>`;
+    if (siempre || regFondo || (fondoPedido && performance.now() - fondoPedido < 90000)) html = htmlVista(true) + html;
+    if (zona.dataset.h !== html) { zona.dataset.h = html; const t = document.createElement('template'); t.innerHTML = html; if (zona.childNodes.length) morfar(zona, t.content); else zona.innerHTML = html; }
+  }
+  // Pide ver la cámara sin mostrar aviso (para registrar)
+  function verEnSilencio(seg) { verPedido = performance.now(); con.enviarComando({ tipo: 'ver', seg: seg || 60 }); }
 
   // ---------- Historial ----------
   function htmlHistorial() {
@@ -340,7 +372,7 @@
   function htmlAjustes() {
     const c = nube.config, v = c.vision, inst = nube.instalacion || {};
     const opt = (arr, val, suf) => arr.map((x) => `<option value="${x}" ${+val === x ? 'selected' : ''}>${x}${suf || ''}</option>`).join('');
-    let h = `<p class="saludo">Ajustes</p>` + htmlModo();
+    let h = `<p class="saludo">Ajustes</p>` + htmlMiCuenta() + htmlModo();
     if (esLibre()) {
       h += `<div class="tarjeta"><h4>Modo libre</h4>
         <div class="form-fila"><label>Tiempo mínimo entre comidas de un mismo gato</label><select data-act-change="cfg" data-k="libreIntervaloMin">${[30, 60, 90, 120, 180, 240].map((m) => `<option value="${m}" ${+c.libreIntervaloMin === m ? 'selected' : ''}>${horas(m)}</option>`).join('')}</select></div>
@@ -372,6 +404,24 @@
     h += `<div class="tarjeta"><h4>Demo</h4><button class="peligro" data-act="reiniciar">Reiniciar la app</button><p class="mini">Borra lo que la app guardó en este navegador.</p></div>`;
     return h;
   }
+  function htmlMiCuenta() {
+    const u = usuario() || {};
+    if (u.invitado) {
+      return `<div class="tarjeta"><h4>Mi cuenta</h4><p class="mini">Estás usando la demo sin cuenta.</p>
+        <button class="primario" data-act="cuenta-desde-invitado">Crear cuenta</button></div>`;
+    }
+    const err = errCuenta ? `<p class="mini mal" id="cuenta-error" role="alert">${esc(errCuenta)}</p>` : '<p class="mini mal" id="cuenta-error" role="alert"></p>';
+    let h = `<div class="tarjeta"><h4>Mi cuenta</h4>
+      <div class="fila"><div class="gato-cab">${Dibujos.avatar(u.nombre || 'Tú', null, 40)}<div><b>${esc(u.nombre || '')}</b><div class="t2">${esc(u.correo || '')}</div></div></div></div>
+      <div class="fila"><div>Comedero<div class="t2">${esc(u.comedero || con.codigo)}${app.wifi ? ' · Wi-Fi "' + esc(app.wifi) + '"' : ''}</div></div></div>
+      <p class="mini">${notaCuenta()}</p>
+      <div class="fila-botones"><button data-act="cuenta-panel" data-p="nombre">Cambiar nombre</button><button data-act="cuenta-panel" data-p="clave">Cambiar contraseña</button></div>`;
+    if (cuentaPanel === 'nombre') h += `<div class="sub-form">${campo('cu-nuevoNombre', 'Nuevo nombre', 'text', `maxlength="24" placeholder="${esc(u.nombre || '')}"`)}${err}<button class="primario" data-act="cuenta-nombre">Guardar</button></div>`;
+    if (cuentaPanel === 'clave') h += `<div class="sub-form">${campo('cu-actual', 'Contraseña actual', 'password', 'autocomplete="current-password"')}${campo('cu-nueva', 'Contraseña nueva', 'password', 'autocomplete="new-password"')}${campo('cu-nueva2', 'Repite la contraseña nueva', 'password', 'autocomplete="new-password"')}${err}<button class="primario" data-act="cuenta-clave">Cambiar contraseña</button></div>`;
+    if (cuentaPanel === 'eliminar') h += `<div class="sub-form"><p class="mini">Se borra tu cuenta. El comedero sigue funcionando con su configuración.</p>${campo('cu-claveEliminar', 'Escribe tu contraseña para confirmar', 'password', 'autocomplete="current-password"')}${err}<button class="peligro" data-act="cuenta-eliminar">Eliminar mi cuenta</button></div>`;
+    h += `<div class="fila-botones" style="margin-top:8px"><button data-act="cuenta-salir">Cerrar sesión</button><button class="peligro" data-act="cuenta-panel" data-p="eliminar">Eliminar cuenta</button></div></div>`;
+    return h;
+  }
   function actualizarAjustesDinamico() {
     const inst = nube.instalacion || {}, cm = camInfo();
     const f = $('#aj-fondo'), p = $('#aj-plato'), c = $('#aj-con');
@@ -380,25 +430,77 @@
     if (c && c.textContent !== con.texto) c.textContent = con.texto;
   }
 
+  // ---------- Cuenta: crear, entrar, recuperar ----------
+  const campo = (id, etiqueta, tipo, extra) => {
+    const v = formCuenta[id] == null ? '' : formCuenta[id];
+    const clave = tipo === 'password';
+    return `<div class="form-fila"><label for="${id}">${etiqueta}</label>${clave ? '<div class="clave-caja">' : ''}<input type="${tipo}" id="${id}" value="${esc(v)}" ${extra || ''}>${clave ? `<button type="button" class="ver-clave" data-act="ver-clave" data-para="${id}" aria-label="Mostrar u ocultar la contraseña">Mostrar</button></div>` : ''}</div>`;
+  };
+  const notaCuenta = () => (cuenta.modo === 'firebase'
+    ? 'Tu cuenta queda en la nube (Firebase): entras desde cualquier celular.'
+    : 'En esta versión tu cuenta se guarda en este dispositivo. Con Firebase (LEEME, sección 4) queda en la nube.');
+  function htmlCuenta() {
+    if (!cuentaLista) return `<div class="hero hero-verde">${Dibujos.escena('INICIO')}</div><p class="saludo">Conectando con tu cuenta…</p>`;
+    const err = errCuenta ? `<p class="mini mal" id="cuenta-error" role="alert">${esc(errCuenta)}</p>` : '<p class="mini mal" id="cuenta-error" role="alert"></p>';
+    const ok = okCuenta ? `<div class="alerta ok-caja">${esc(okCuenta)}</div>` : '';
+    const espera = (t, t2) => (ocupadoCuenta ? `disabled>${t2}` : `>${t}`);
+    if (pantallaCuenta === 'crear') {
+      return `<button class="enlace volver-cuenta" data-act="cuenta-ir" data-p="inicio">‹ Volver</button>
+        <p class="saludo">Crea tu cuenta</p><p class="mini">Con tu cuenta controlas tu comedero desde el celular.</p>
+        ${campo('cu-nombre', 'Tu nombre', 'text', 'autocomplete="name" maxlength="24" placeholder="Franco"')}
+        ${campo('cu-correo', 'Correo', 'email', 'autocomplete="email" inputmode="email" placeholder="tucorreo@gmail.com"')}
+        ${campo('cu-clave', 'Contraseña (mínimo 6 caracteres)', 'password', 'autocomplete="new-password"')}
+        ${campo('cu-clave2', 'Repite la contraseña', 'password', 'autocomplete="new-password"')}
+        ${err}<button class="primario grande" data-act="cuenta-crear" ${espera('Crear cuenta', 'Creando tu cuenta…')}</button>
+        <p class="mini">${notaCuenta()} Tus datos solo se usan para tu comedero.</p>
+        <p class="centro"><button class="enlace" data-act="cuenta-ir" data-p="entrar">Ya tengo cuenta</button></p>`;
+    }
+    if (pantallaCuenta === 'entrar') {
+      return `<button class="enlace volver-cuenta" data-act="cuenta-ir" data-p="inicio">‹ Volver</button>
+        <p class="saludo">Inicia sesión</p>${ok}
+        ${campo('cu-correo', 'Correo', 'email', 'autocomplete="email" inputmode="email" placeholder="tucorreo@gmail.com"')}
+        ${campo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"')}
+        ${err}<button class="primario grande" data-act="cuenta-entrar" ${espera('Entrar', 'Entrando…')}</button>
+        <p class="centro"><button class="enlace" data-act="cuenta-ir" data-p="recuperar">¿Olvidaste tu contraseña?</button></p>
+        <p class="centro"><button class="enlace" data-act="cuenta-ir" data-p="crear">Crear una cuenta nueva</button></p>`;
+    }
+    if (pantallaCuenta === 'recuperar') {
+      return `<button class="enlace volver-cuenta" data-act="cuenta-ir" data-p="entrar">‹ Volver</button>
+        <p class="saludo">Recupera tu contraseña</p><p class="mini">Escribe el correo de tu cuenta.</p>${ok}
+        ${campo('cu-correo', 'Correo', 'email', 'autocomplete="email" inputmode="email"')}
+        ${err}<button class="primario grande" data-act="cuenta-recuperar" ${espera('Enviar', 'Enviando…')}</button>`;
+    }
+    return `<div class="hero hero-verde">${Dibujos.escena('CONSUMO')}</div>
+      <p class="saludo">Comedero inteligente</p>
+      <p class="mini">Sirve la comida a cada gato cuando lo reconoce y renueva el papel después de cada comida.</p>
+      <button class="primario grande" data-act="cuenta-ir" data-p="crear">Crear cuenta</button>
+      <button class="grande" data-act="cuenta-ir" data-p="entrar" style="margin-top:8px">Ya tengo cuenta</button>
+      <p class="centro"><button class="enlace" data-act="ob-saltar">Saltar la configuración (ver la demo sin cuenta)</button></p>`;
+  }
+
   // ---------- Primer uso ----------
   function htmlBienvenida() {
     const p = app.paso;
     const pasos = `<div class="pasos">${[0, 1, 2, 3, 4].map((i) => `<i class="${i <= p ? 'on' : ''}"></i>`).join('')}</div>`;
     const saltar = `<button class="enlace" data-act="ob-saltar">Saltar la configuración</button>`;
-    if (p === 0) return `${pasos}<div class="hero hero-verde">${Dibujos.escena('CONSUMO')}</div><p class="saludo">Bienvenido a tu comedero</p><p class="mini">Vamos a dejarlo listo en 5 pasos.</p>
-      <div class="form-fila"><label for="ob-nombre">Tu nombre</label><input type="text" id="ob-nombre" placeholder="Franco" value="${esc(app.nombre)}" maxlength="24"></div>
-      <div class="form-fila"><label>Correo</label><input type="text" placeholder="tucorreo@gmail.com" disabled></div>
-      <p class="mini">Con Firebase Authentication aquí se crea tu cuenta. En esta versión los datos quedan en tu comedero (código ${esc(con.codigo)}).</p>
-      <button class="primario grande" data-act="ob-siguiente">Crear cuenta</button>${saltar}`;
-    if (p === 1) return `${pasos}<p class="saludo">Conecta tu comedero</p><p class="mini">Enchúfalo. El comedero crea su propia red "Comedero-4F2A": conéctate a ella y elige el Wi-Fi de tu casa (WiFiManager).</p>
-      <div class="form-fila"><label>Red Wi-Fi de tu casa</label><input type="text" value="MiCasa_2.4G" aria-label="Red Wi-Fi"></div>
-      <div class="form-fila"><label>Contraseña</label><input type="password" value="12345678" aria-label="Contraseña del Wi-Fi"></div>
+    if (p <= 1) {
+      const vinc = !!app.vinculado;
+      return `${pasos}<p class="saludo">Conecta tu comedero</p>
+      <ol class="pasos-lista"><li>Enchufa el comedero: el LED se pone azul intermitente.</li><li>Escribe el código de la etiqueta que está debajo del equipo.</li><li>Elige el Wi-Fi de tu casa (de 2.4 GHz): el comedero se conecta solo.</li></ol>
+      ${CTX.comedero ? `<p class="mini pista">En la demo, el código está en el panel del comedero: <b>${esc(con.codigo)}</b></p>` : ''}
+      ${campo('ob-codigo', 'Código del comedero', 'text', `placeholder="COMEDERO-XXXX" autocapitalize="characters" maxlength="16" ${vinc ? 'disabled' : ''}`)}
+      ${campo('ob-wifi', 'Red Wi-Fi de tu casa', 'text', `placeholder="MiCasa_2.4G" maxlength="32" ${vinc ? 'disabled' : ''}`)}
+      ${campo('ob-wifiClave', 'Contraseña del Wi-Fi', 'password', `autocomplete="off" ${vinc ? 'disabled' : ''}`)}
+      ${errCuenta ? `<p class="mini mal" role="alert">${esc(errCuenta)}</p>` : ''}
       <p id="ob-con" class="mini"></p>
-      <button class="primario grande" data-act="ob-siguiente">Conectar</button>${saltar}`;
-    if (p === 2) return `${pasos}<p class="saludo">Prepara la cámara</p><p class="mini">La cámara necesita ver una vez la plataforma vacía y el papel limpio.</p>
-      <div class="fila"><div>1. Cámara del comedero<div class="t2" id="ob-cam"></div></div>${CTX.cam ? '<button data-act="ob-webcam">Encender</button>' : ''}</div>
-      <div class="fila"><div>2. Fondo vacío<div class="t2" id="aj-fondo"></div></div><button data-act="fondo">Registrar</button></div>
+      ${vinc ? `<button class="primario grande" data-act="ob-siguiente">Siguiente</button><button class="enlace" data-act="ob-cambiar">Cambiar el código o el Wi-Fi</button>`
+        : `<button class="primario grande" data-act="ob-conectar">Conectar</button>`}${saltar}`;
+    }
+    if (p === 2) return `${pasos}<p class="saludo">Prepara la cámara</p><p class="mini">La cámara necesita ver una vez el lugar del comedero sin gato y el papel limpio. Aquí ves lo que ve la cámara.</p>
+      <div class="fila"><div>1. Cámara del comedero<div class="t2" id="ob-cam"></div></div>${CTX.cam ? '<div class="fila-botones"><button data-act="ob-webcam">Encender</button><button data-act="cam-cambiar">Cambiar cámara</button></div>' : '<button data-act="ver">Ver la cámara</button>'}</div>
+      <div class="fila"><div>2. Fondo sin gato<div class="t2" id="aj-fondo"></div></div><button data-act="fondo">Registrar</button></div>
       <div class="fila"><div>3. Papel limpio (zona de comida)<div class="t2" id="aj-plato"></div></div><button data-act="plato">Calibrar</button></div>
+      <div id="fondo-zona"></div>
       <button class="primario grande" data-act="ob-siguiente" style="margin-top:12px">Siguiente</button>${saltar}`;
     if (p === 3) {
       const g = nube.gatos[0];
@@ -420,7 +522,13 @@
   }
   const ponerHTML = (el, t) => { if (el && el.innerHTML !== t) el.innerHTML = t; };
   function actualizarBienvenidaDinamica() {
-    if (app.paso === 1) ponerHTML($('#ob-con'), desconectado() ? `<span class="warn">Buscando el comedero…${con.modo === 'pestanas' ? ' Abre comedero.html en otra pestaña.' : ''}</span>` : '<span class="ok">Comedero encontrado y conectado</span>');
+    if (app.paso <= 1) ponerHTML($('#ob-con'), !app.vinculado ? '' : desconectado() ? `<span class="warn">Buscando el comedero ${esc(con.codigo)}…${con.modo === 'pestanas' ? ' Abre comedero.html en otra pestaña.' : ''}</span>` : `<span class="ok">Comedero ${esc(con.codigo)} encontrado y conectado al Wi-Fi "${esc(app.wifi || '')}"</span>`);
+    if (app.paso === 2) {
+      actualizarFondo(true);
+      // En este paso la app pide ver la cámara (como "Ver a mi gato"), para que el dueño vea a dónde apunta
+      const e = nube.estado || {};
+      if (camInfo().webcam && !desconectado() && !(e.viendo > 5) && performance.now() - verAuto > 8000) { verAuto = performance.now(); verEnSilencio(90); }
+    }
     if (app.paso === 2) {
       const cm = camInfo();
       ponerHTML($('#ob-cam'), cm.webcam ? '<span class="ok">Encendida</span>' : (CTX.cam ? 'Apagada' : 'Apagada: enciende la webcam en la página del comedero'));
@@ -476,7 +584,30 @@
         } else if (g) { b.dataset.seguro = '1'; b.textContent = `¿Eliminar a ${g.nombre}? Toca otra vez`; }
         break;
       }
-      case 'fondo': enviarComando({ tipo: 'registrarFondo' }, 'Registrando el fondo vacío'); break;
+      case 'fondo': fondoPedido = performance.now(); fondoVioReg = false; verEnSilencio(90); enviarComando({ tipo: 'registrarFondo' }, 'Registrando el fondo: que no haya ningún gato a la vista'); break;
+      case 'cam-cambiar': if (CTX.cam) CTX.cam.cambiarCamara().then((ok) => toast(ok ? (CTX.cam.trasera ? 'Cámara trasera' : 'Cámara frontal') : 'No se pudo cambiar la cámara')); break;
+      case 'ver-clave': {
+        const inp = vistaEl.querySelector('#' + b.dataset.para); if (!inp) break;
+        const ver = inp.type === 'password'; inp.type = ver ? 'text' : 'password'; b.textContent = ver ? 'Ocultar' : 'Mostrar'; break;
+      }
+      case 'cuenta-ir': pantallaCuenta = b.dataset.p; errCuenta = ''; okCuenta = ''; animar = true; renderApp(true); break;
+      case 'cuenta-crear': accionCuenta('crear'); break;
+      case 'cuenta-entrar': accionCuenta('entrar'); break;
+      case 'cuenta-recuperar': accionCuenta('recuperar'); break;
+      case 'cuenta-salir': accionCuenta('salir'); break;
+      case 'cuenta-panel': cuentaPanel = cuentaPanel === b.dataset.p ? '' : b.dataset.p; errCuenta = ''; okCuenta = ''; renderApp(true); break;
+      case 'cuenta-nombre': accionCuenta('nombre'); break;
+      case 'cuenta-clave': accionCuenta('clave'); break;
+      case 'cuenta-eliminar': accionCuenta('eliminar'); break;
+      case 'cuenta-desde-invitado': app.invitado = false; pantallaCuenta = 'crear'; errCuenta = ''; animar = true; renderApp(true); break;
+      case 'ob-conectar': {
+        const cod = String(formCuenta['ob-codigo'] || '').trim().toUpperCase(), wifi = String(formCuenta['ob-wifi'] || '').trim(), wc = String(formCuenta['ob-wifiClave'] || '');
+        const e = window.CuentaDueno.REGLAS.codigo(cod, con.codigo) || (!wifi ? 'Escribe el nombre de tu red Wi-Fi' : '') || (wc.length < 8 ? 'La contraseña del Wi-Fi tiene al menos 8 caracteres' : '');
+        errCuenta = e;
+        if (!e) { app.vinculado = true; app.wifi = wifi; formCuenta['ob-codigo'] = cod; if (!app.invitado) cuenta.vincular(cod); toast('Conectando el comedero al Wi-Fi…'); }
+        renderApp(true); break;
+      }
+      case 'ob-cambiar': app.vinculado = false; renderApp(true); break;
       case 'plato': enviarComando({ tipo: 'calibrarPlato' }, 'Calibrando el papel limpio'); break;
       case 'agregarHorario': {
         // Propone una hora que no esté ya usada (no se duplican horarios)
@@ -491,10 +622,11 @@
         else { b.dataset.seguro = '1'; b.textContent = 'Toca otra vez para borrar'; }
         break;
       case 'ob-siguiente':
-        if (app.paso === 0) app.nombre = ($('#ob-nombre').value || '').trim();
-        app.paso = Math.min(4, app.paso + 1); renderApp(true); break;
+        errCuenta = ''; app.paso = Math.min(4, Math.max(1, app.paso) + 1); animar = true; renderApp(true); break;
       case 'ob-webcam': if (CTX.cam) CTX.cam.encender().then((ok) => { if (!ok) toast('No se pudo abrir la webcam. Revisa los permisos.'); }); break;
-      case 'ob-saltar': case 'ob-fin': app.onboarding = true; nube.config.horariosActivos = true; irA('inicio'); break;
+      case 'ob-saltar': case 'ob-fin':
+        if (!usuario()) app.invitado = true;      // "ver la demo sin cuenta"
+        app.onboarding = true; nube.config.horariosActivos = true; irA('inicio'); break;
     }
   });
   vistaEl.addEventListener('change', (ev) => {
@@ -511,9 +643,62 @@
     if (a === 'cfg') { const k = t.dataset.k; nube.config[k] = k === 'siCamaraFalla' ? t.value : +t.value; avisar(); }
     if (a === 'vis') { nube.config.vision[t.dataset.k] = +t.value; avisar(); }
   });
-  vistaEl.addEventListener('input', (ev) => { if (ev.target.id === 'ng-nombre') nuevoGato.nombre = ev.target.value; if (ev.target.id === 'ng-racion') nuevoGato.racionG = +ev.target.value; });
+  vistaEl.addEventListener('input', (ev) => {
+    const id = ev.target.id;
+    if (id === 'ng-nombre') nuevoGato.nombre = ev.target.value; if (id === 'ng-racion') nuevoGato.racionG = +ev.target.value;
+    if (/^(cu-|ob-codigo|ob-wifi)/.test(id)) { formCuenta[id] = ev.target.value; if (errCuenta) { errCuenta = ''; const el = vistaEl.querySelector('#cuenta-error'); if (el) el.textContent = ''; } }
+  });
+  // Enter en un formulario de la cuenta = tocar su botón principal
+  vistaEl.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' || !/^(cu-|ob-)/.test(ev.target.id || '')) return;
+    const b = vistaEl.querySelector('[data-act="cuenta-crear"],[data-act="cuenta-entrar"],[data-act="cuenta-recuperar"],[data-act="ob-conectar"]');
+    if (b && !b.disabled) { ev.preventDefault(); b.click(); }
+  });
+  const valor = (id) => { const el = vistaEl.querySelector('#' + id); return el ? el.value : (formCuenta[id] || ''); };
+  async function accionCuenta(que) {
+    if (ocupadoCuenta) return;
+    errCuenta = ''; okCuenta = '';
+    const correo = valor('cu-correo'), clave = valor('cu-clave');
+    let r = { ok: true };
+    if (que === 'crear' && valor('cu-clave2') !== clave) r = { ok: false, error: 'Las contraseñas no coinciden' };
+    else if (que === 'crear' && !valor('cu-clave2') && clave) r = { ok: false, error: 'Repite la contraseña' };
+    if (r.ok) {
+      ocupadoCuenta = true; if (/crear|entrar|recuperar/.test(que)) renderApp(true);
+      try {
+        if (que === 'crear') r = await cuenta.crear({ nombre: valor('cu-nombre'), correo, clave });
+        if (que === 'entrar') r = await cuenta.entrar({ correo, clave });
+        if (que === 'recuperar') r = await cuenta.recuperar(correo);
+        if (que === 'salir') r = await cuenta.salir();
+        if (que === 'nombre') r = await cuenta.cambiarNombre(valor('cu-nuevoNombre'));
+        if (que === 'clave') r = valor('cu-nueva2') !== valor('cu-nueva') ? { ok: false, error: 'Las contraseñas nuevas no coinciden' } : await cuenta.cambiarClave(valor('cu-actual'), valor('cu-nueva'));
+        if (que === 'eliminar') r = await cuenta.eliminar(valor('cu-claveEliminar'));
+      } catch (e) { r = { ok: false, error: 'No se pudo: ' + e.message }; }
+      ocupadoCuenta = false;
+    }
+    if (!r.ok) { errCuenta = r.error; renderApp(true); const el = vistaEl.querySelector('#cuenta-error'); if (el) el.textContent = r.error; return; }
+    const u = cuenta.actual();
+    if (que === 'crear') {
+      app.invitado = false; app.nombre = u ? u.nombre : app.nombre;
+      if (app.onboarding) { cuenta.vincular(con.codigo); app.vinculado = true; toast('Cuenta creada. Tu comedero ya quedó vinculado'); }
+      else { app.paso = Math.max(1, app.paso); toast('¡Cuenta creada! Ahora conecta tu comedero'); }
+      formCuenta = {}; animar = true;
+    }
+    if (que === 'entrar') {
+      app.invitado = false; app.nombre = u ? u.nombre : app.nombre;
+      if (!app.onboarding) { app.vinculado = !!(u && u.comedero); app.paso = app.vinculado ? Math.max(2, app.paso) : 1; }
+      toast('Hola, ' + (u ? u.nombre : '')); formCuenta = {}; animar = true;
+    }
+    if (que === 'crear' || que === 'entrar') { if (app.onboarding) { irA('inicio'); return; } }
+    if (que === 'recuperar') { okCuenta = r.mensaje || ''; }
+    if (que === 'salir') { app.invitado = false; vista = 'inicio'; pantallaCuenta = 'entrar'; formCuenta = {}; cuentaPanel = ''; animar = true; toast('Sesión cerrada'); }
+    if (que === 'nombre') { app.nombre = valor('cu-nuevoNombre').trim(); cuentaPanel = ''; toast('Nombre guardado'); }
+    if (que === 'clave') { cuentaPanel = ''; ['cu-actual', 'cu-nueva', 'cu-nueva2'].forEach((k) => delete formCuenta[k]); toast('Contraseña cambiada'); }
+    if (que === 'eliminar') { app.invitado = false; vista = 'inicio'; pantallaCuenta = 'inicio'; formCuenta = {}; cuentaPanel = ''; animar = true; toast('Cuenta eliminada'); }
+    renderApp(true);
+  }
   function registrar(gid) {
     registrando = { id: gid, t0: ahoraSim() - 1000 };
+    verEnSilencio(90);
     enviarComando({ tipo: 'registrar', gatoId: gid }, 'Registrando con la cámara');
   }
 

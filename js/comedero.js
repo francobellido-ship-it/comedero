@@ -46,6 +46,8 @@
     PULSACION_LARGA_S: 3,
     MAX_PORCIONES: 4,
     GATO_SE_FUE_S: 4,           // sin MOV en 4 s → el gato se fue (renovación)
+    VISTAZO_S: 20,              // horario: al abrir la ventana, la cámara mira 20 s (por si el gato ya espera)
+    REC_TRAS_MOV_S: 30,         // horario: tras cada MOV del PIR, la cámara sigue mirando hasta 30 s después del último
     LIBRE_ESPERA_S: 30,         // modo libre: la cámara mira hasta 30 s quién llegó
     LIBRE_CALMA_S: 30,          // modo libre: tras no servir, el PIR se ignora 30 s
     PRUEBA_S: 30,               // "Probar reconocimiento" desde la app
@@ -498,7 +500,6 @@
       let fin = this.reloj.sim + this.config.esperaMin * 60000;   // la espera se pausa mientras come otro gato
       let porDefecto = false;
       while (pend.length) {
-        this._set('RECONOCIMIENTO', `Esperando a ${pend.map((i) => this._nombre(i)).join(', ')} (hasta las ${hhmm(fin)})`);
         const r = await this.reconocerGato(id, pend, fin);
         if (r.tipo === 'gato') {
           const g = this.gatos.find((x) => x.id === r.id);
@@ -530,26 +531,49 @@
     }
     _omitirTodos(h, motivo) { this._omitir(this.gatos.map((g) => g.id), h, motivo); }
 
-    // Reconocer_Gato() — Figura D.2
+    // Reconocer_Gato() — Figura D.2, con la cámara dormida entre visitas.
+    // La ventana de espera dura esperaMin, pero la cámara no queda encendida todo ese tiempo:
+    //  1. al abrir la ventana mira VISTAZO_S (20 s), por si el gato ya está esperando;
+    //  2. luego duerme; cada MOV del PIR la despierta (REC) y sigue mirando mientras haya
+    //     movimiento y hasta REC_TRAS_MOV_S (30 s) después del último MOV;
+    //  3. sin movimiento, FIN: la cámara vuelve a dormir hasta el próximo MOV.
+    // La señal de vida (OK) solo se exige mientras la cámara está despierta.
     async reconocerGato(id, pend, finSim) {
       this.rx = [];
-      const t0 = this.reloj.real;
-      this.tx('REC');
-      const ok = await this._esperar(() => this.lastOK >= t0, CFG.CAMARA_TIMEOUT_S, id);
-      if (!ok) { this.tx('FIN'); return { tipo: 'camara' }; }
+      const R = this.reloj, nombres = () => pend.map((i) => this._nombre(i)).join(', ');
+      let activa = false, recHasta = 0, movVisto = this.lastMovReal, desde = 0;
+      const uso = this.usoCamara = { seg: 0, veces: 0 };
+      const detalle = () => this._set('RECONOCIMIENTO', `Esperando a ${nombres()} (hasta las ${hhmm(finSim)}) · ${activa ? 'la cámara está mirando' : 'cámara dormida: la despierta el PIR'}`);
+      const despertar = async (motivo) => {
+        const t0 = R.real; this.rx = [];
+        this.tx('REC'); activa = true; desde = t0; uso.veces++; detalle();
+        if (motivo) this.evento(motivo);
+        return this._esperar(() => this.lastOK >= t0, CFG.CAMARA_TIMEOUT_S, id);
+      };
+      const dormir = (txt) => { this.tx('FIN'); uso.seg += (R.real - desde) / 1000; activa = false; detalle(); if (txt) this.evento(txt); };
+      const terminar = (r) => { if (activa) dormir(); this.evento(`Ventana del horario: la cámara estuvo encendida ${Math.round(uso.seg)} s en ${uso.veces} ${uso.veces === 1 ? 'vez' : 'veces'}`); return r; };
+      recHasta = R.real + CFG.VISTAZO_S * 1000;
+      if (!(await despertar('Se abre la ventana: la cámara mira 20 s por si el gato ya está esperando'))) { dormir(); return terminar({ tipo: 'camara' }); }
       while (true) {
+        // Movimiento del PIR: despierta la cámara o alarga su tiempo encendida
+        if (this.lastMovReal > movVisto) {
+          movVisto = this.lastMovReal;
+          recHasta = Math.max(recHasta, R.real + CFG.REC_TRAS_MOV_S * 1000);
+          if (!activa && !(await despertar('El PIR vio movimiento: la cámara despierta y busca al gato'))) { dormir(); return terminar({ tipo: 'camara' }); }
+        }
         const m = this.rx.shift();
         if (m) {
           if (m.p[0] === 'GATO') {
             const gid = +m.p[1], p = +m.p[2];
-            if (pend.includes(gid)) { this.tx('FIN'); return { tipo: 'gato', id: gid, p }; }
+            if (pend.includes(gid)) return terminar({ tipo: 'gato', id: gid, p });
             this.evento(`${this._nombre(gid)} ya comió en este horario: se ignora`);
           }
           continue;
         }
-        if (this.reloj.sim >= finSim) { this.tx('FIN'); return { tipo: 'nadie' }; }
-        if (this.reloj.real - this.lastOK > CFG.CAMARA_TIMEOUT_S * 1000) { this.tx('FIN'); return { tipo: 'camara' }; }
-        await this.reloj.dormir(0.05); this._vivo(id);
+        if (R.sim >= finSim) return terminar({ tipo: 'nadie' });
+        if (activa && R.real > recHasta) dormir('Nadie a la vista: la cámara vuelve a dormir hasta que el PIR vea movimiento');
+        if (activa && R.real - this.lastOK > CFG.CAMARA_TIMEOUT_S * 1000) { dormir(); return terminar({ tipo: 'camara' }); }
+        await R.dormir(0.05); this._vivo(id);
       }
     }
 

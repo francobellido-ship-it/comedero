@@ -14,7 +14,12 @@
   const tarjeta = (sel) => { const e = $(sel); return e ? e.closest('.card') || e : null; };
   const ctx = () => window.CTX || {};
   const clic = (sel) => { const b = $(sel); if (b && !b.disabled) { b.click(); return true; } return false; };
-  const verApp = async (v) => { clic(`#app-nav button[data-vista="${v}"]`); await dormir(0.5); };
+  const verApp = async (v) => {
+    // Si la app está en la pantalla de la cuenta o en el primer uso, entra como demo sin cuenta
+    const nav = document.querySelector('#app-nav');
+    if (nav && getComputedStyle(nav).display === 'none') { clic('#app-vista [data-act="ob-saltar"]'); await dormir(0.6); }
+    clic(`#app-nav button[data-vista="${v}"]`); await dormir(0.5);
+  };
 
   async function escenario(clave, pres) {
     if (!window.correrEscenario) return;
@@ -101,7 +106,7 @@
     },
     {
       titulo: 'Validado por simulación',
-      texto: '237 comprobaciones correctas: lógica del ESP32 (con 900 corridas al azar), visión, conexión app ↔ comedero, todos los modos y fallas usados como un dueño en el navegador y más de 1 000 acciones al azar sin romper ninguna regla. En el prototipo físico se validan los sensores y la faja.',
+      texto: '280 comprobaciones correctas: lógica del ESP32 (con 900 corridas al azar), visión, conexión app ↔ comedero, cuenta del dueño, todos los modos y fallas usados como un cliente en el navegador y más de 1 200 acciones al azar sin romper ninguna regla. En el prototipo físico se validan los sensores y la faja.',
       foco: [],
       accion: async () => {
         const { comedero } = ctx();

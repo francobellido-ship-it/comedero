@@ -601,6 +601,64 @@ async function caso(grupo, nombre, fn) {
     return { ok: c.activa('inventario') && !sinFalla.c.activa('inventario'), detalle: `con falla: ${!!c.activa('inventario')} · sin falla: ${!!sinFalla.c.activa('inventario')}` };
   });
 
+  // ---------------- J. Horario con la cámara dormida (la despierta el PIR) ----------------
+  console.log('J. Horario con la cámara dormida entre visitas');
+  await caso('J', 'Nadie llega: la cámara solo mira 20 s al abrir la ventana y duerme el resto', async () => {
+    const { c, cam } = await listo('J1', { gatos: [['Michi', 24]], config: { esperaMin: 30 }, vel: 30 });
+    c.irAlProximoHorario();
+    await correr(c, cam, 12, 'J1'); const mirando = cam.rec;
+    await correr(c, cam, 15, 'J1'); const dormida = !cam.rec && c.estado === 'RECONOCIMIENTO';
+    await correr(c, cam, 60, 'J1', () => omitidas(c).length === 1 && enEspera(c)());
+    const u = c.usoCamara;
+    return { ok: mirando && dormida && omitidas(c).length === 1 && u.veces === 1 && u.seg > 18 && u.seg < 23, detalle: `encendida ${u.seg.toFixed(1)} s en ${u.veces} vez · ventana de 60 s reales` };
+  });
+  await caso('J', 'El gato ya esperaba al abrir la ventana: lo ve en el primer vistazo', async () => {
+    const { c, cam } = await listo('J2', { gatos: [['Michi', 24]], vel: 60 });
+    cam.llega(1, 2000); c.irAlProximoHorario();
+    await correr(c, cam, 60, 'J2', () => comidas(c).length && enEspera(c)());
+    return { ok: comidas(c).length === 1 && c.usoCamara.veces === 1, detalle: `${c.usoCamara.seg.toFixed(1)} s encendida` };
+  });
+  await caso('J', 'El gato llega a mitad de la ventana: el PIR despierta la cámara y se le sirve', async () => {
+    const { c, cam } = await listo('J3', { gatos: [['Michi', 24]], config: { esperaMin: 30 }, vel: 30 });
+    c.irAlProximoHorario();
+    await correr(c, cam, 30, 'J3'); const dormida = !cam.rec;
+    cam.llega(1, 2500); cam.mov(4000);
+    const comio = await correr(c, cam, 40, 'J3', () => comidas(c).length === 1);
+    await correr(c, cam, 60, 'J3', enEspera(c));
+    return { ok: dormida && comio && c.usoCamara.veces === 2, detalle: `despertó ${c.usoCamara.veces} veces · ${c.usoCamara.seg.toFixed(1)} s encendida` };
+  });
+  await caso('J', 'Pasa alguien (movimiento sin gato): mira 30 s y vuelve a dormir; luego llega el gato', async () => {
+    const { c, cam } = await listo('J4', { gatos: [['Michi', 24]], config: { esperaMin: 60 }, vel: 30 });
+    c.irAlProximoHorario();
+    await correr(c, cam, 25, 'J4');
+    cam.mov(3000); await correr(c, cam, 5, 'J4'); const desperto = cam.rec;
+    await correr(c, cam, 35, 'J4'); const volvio = !cam.rec;
+    cam.llega(1, 2000); cam.mov(3000);
+    await correr(c, cam, 40, 'J4', () => comidas(c).length === 1);
+    return { ok: desperto && volvio && comidas(c).length === 1 && c.usoCamara.veces === 3, detalle: `despertó ${c.usoCamara.veces} veces` };
+  });
+  await caso('J', 'Mientras haya movimiento la cámara sigue mirando (no se apaga a los 30 s)', async () => {
+    const { c, cam } = await listo('J5', { gatos: [['Michi', 24]], config: { esperaMin: 60 }, vel: 20 });
+    c.irAlProximoHorario(); await correr(c, cam, 25, 'J5');
+    cam.mov(50000); await correr(c, cam, 45, 'J5'); const sigue = cam.rec;
+    await correr(c, cam, 40, 'J5'); const duerme = !cam.rec;
+    return { ok: sigue && duerme && c.usoCamara.veces === 1 + 1, detalle: `a los 45 s con movimiento: ${sigue ? 'mirando' : 'dormida'}` };
+  });
+  await caso('J', 'La cámara no responde al abrir la ventana: alerta y ración según el ajuste', async () => {
+    const { c, cam } = await listo('J6', { gatos: [['Michi', 24]], config: { siCamaraFalla: 'dosificar' } });
+    cam.muerta = true; c.irAlProximoHorario();
+    await correr(c, cam, 60, 'J6', () => comidas(c).length && enEspera(c)());
+    return { ok: c.activa('camara') && comidas(c).length === 1 && /por defecto/.test(comidas(c)[0].modo) };
+  });
+  await caso('J', 'La cámara se muere mientras duerme: se detecta al despertarla el PIR', async () => {
+    const { c, cam } = await listo('J7', { gatos: [['Michi', 24]], config: { esperaMin: 60, siCamaraFalla: 'no' }, vel: 30 });
+    c.irAlProximoHorario(); await correr(c, cam, 25, 'J7');
+    cam.muerta = true; c.onUart('MOV');
+    await correr(c, cam, 20, 'J7', () => c.activa('camara'));
+    await correr(c, cam, 20, 'J7', enEspera(c));
+    return { ok: c.activa('camara') && omitidas(c).length === 1 && /cámara/.test(omitidas(c)[0].modo) };
+  });
+
   // ---------------- G. Pruebas al azar ----------------
   console.log('G. Pruebas al azar (fuzz) con invariantes');
   let semilla = +(process.env.SEMILLA || 12345);

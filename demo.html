@@ -8,18 +8,19 @@
   <link rel="manifest" href="manifest-demo.json">
   <link rel="icon" href="icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="css/app.css?v=10">
+  <link rel="stylesheet" href="css/app.css?v=14">
   <script>window.ROL = 'todo';</script>
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-  <script defer src="js/firebase-config.js?v=10"></script>
-  <script defer src="js/comedero.js?v=10"></script>
-  <script defer src="js/vision.js?v=10"></script>
-  <script defer src="js/nube.js?v=10"></script>
-  <script defer src="js/sim.js?v=10"></script>
-  <script defer src="js/dibujos.js?v=10"></script>
-  <script defer src="js/app.js?v=10"></script>
-  <script defer src="js/presentacion.js?v=10"></script>
+  <script defer src="js/firebase-config.js?v=14"></script>
+  <script defer src="js/comedero.js?v=14"></script>
+  <script defer src="js/vision.js?v=14"></script>
+  <script defer src="js/nube.js?v=14"></script>
+  <script defer src="js/sim.js?v=14"></script>
+  <script defer src="js/dibujos.js?v=14"></script>
+  <script defer src="js/cuenta.js?v=14"></script>
+  <script defer src="js/app.js?v=14"></script>
+  <script defer src="js/presentacion.js?v=14"></script>
 </head>
 <body>
   <header class="top">
@@ -89,7 +90,7 @@
         </article>
 
         <article class="card panel">
-          <header><h2>Panel del equipo</h2></header>
+          <header><h2>Panel del equipo</h2><span class="etiqueta-codigo" title="Etiqueta debajo del equipo: el dueño la escribe en la app">Código: <b id="codigo-equipo">COMEDERO-4F2A</b></span></header>
           <div class="panel-fila">
             <div class="led-caja"><div id="led" class="led verde"></div><span>LED RGB</span></div>
             <div class="led-caja"><div id="zumb" class="zumb">Zumbador</div><label class="mini"><input type="checkbox" id="chk-sonido"> Sonido</label></div>

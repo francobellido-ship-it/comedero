@@ -33,9 +33,13 @@
     return v === null || v === undefined ? undefined : v;
   }
   const firma = (v) => JSON.stringify(podar(v) === undefined ? null : podar(v));
+  // Un mismo script de Firebase se carga una sola vez aunque lo pidan la nube y la cuenta a la vez
   function cargarScript(src) {
-    return new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No cargó ' + src)); document.head.appendChild(s); });
+    root.__cargasFB = root.__cargasFB || {};
+    if (!root.__cargasFB[src]) root.__cargasFB[src] = new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => { delete root.__cargasFB[src]; mal(new Error('No cargó ' + src)); }; document.head.appendChild(s); });
+    return root.__cargasFB[src];
   }
+  root.cargarScriptFB = cargarScript;
 
   class Conexion {
     constructor(nube, rol) {
@@ -87,11 +91,10 @@
     // ---------- Firebase Realtime Database ----------
     async _firebase(cfg) {
       this.texto = 'Conectando con Firebase…';
-      if (!root.firebase) {
-        await cargarScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`);
-        await cargarScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-database-compat.js`);
-      }
-      const app = root.firebase.apps.length ? root.firebase.app() : root.firebase.initializeApp(cfg);
+      // Cada script se pide una sola vez (la cuenta puede haber cargado ya firebase-app para Authentication)
+      if (!root.firebase || !root.firebase.apps) await cargarScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`);
+      if (!root.firebase.database) await cargarScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-database-compat.js`);
+      let app; try { app = root.firebase.apps.length ? root.firebase.app() : root.firebase.initializeApp(cfg); } catch (e) { app = root.firebase.app(); }
       this.db = app.database();
       this.ref = this.db.ref('comederos/' + this.codigo);
       this.modo = 'firebase';

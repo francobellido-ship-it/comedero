@@ -1,26 +1,25 @@
 /* ============================================================================
- * Configuración de Firebase (opcional)
+ * Configuración de Firebase — proyecto "comedero-gatos"
  * ----------------------------------------------------------------------------
- * Sin esto, la app y el comedero se conectan entre pestañas del mismo navegador.
- * Con esto, la app del celular (APK) y el comedero de la PC se encuentran por
- * Firebase Realtime Database, como en la tesis (Tabla 7.6).
+ * Con esto, la app del celular (app.html o el APK) y el comedero de la PC
+ * (comedero.html) se encuentran por Firebase Realtime Database, como en la tesis,
+ * y las cuentas del dueño usan Firebase Authentication (correo y contraseña).
+ * La demo todo-en-uno (demo.html) no usa Firebase: funciona sin internet.
  *
- * 1. https://console.firebase.google.com → Agregar proyecto (sin Analytics).
- * 2. Compilación → Realtime Database → Crear base de datos → "modo de prueba".
- * 3. Configuración del proyecto → Tus apps → Web (</>) → registra la app y copia
- *    el objeto firebaseConfig aquí abajo (debe tener databaseURL).
- * 4. Usa el mismo código de comedero en todos tus dispositivos.
+ * Proyecto creado el 24-11-2026 con la cuenta ccusfrancobellido@gmail.com:
+ *  - Realtime Database en us-central1, reglas: solo /comederos/COMEDERO-XXXX.
+ *  - Authentication: correo/contraseña habilitado; dominios autorizados:
+ *    localhost, 127.0.0.1 y francobellido-ship-it.github.io.
+ * Estos datos identifican el proyecto (no son una contraseña): es normal que
+ * vayan en una página web pública.
  * ==========================================================================*/
-window.FIREBASE_CONFIG = null;
-/* Ejemplo (reemplaza con el tuyo y quita los comentarios):
 window.FIREBASE_CONFIG = {
-  apiKey: "AIza...",
-  authDomain: "comedero-tesis.firebaseapp.com",
-  databaseURL: "https://comedero-tesis-default-rtdb.firebaseio.com",
-  projectId: "comedero-tesis",
-  storageBucket: "comedero-tesis.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+  apiKey: 'AIzaSyCB-HVVgabMtn-vIsC6uwHNvhCRwluTtWQ',
+  authDomain: 'comedero-gatos.firebaseapp.com',
+  databaseURL: 'https://comedero-gatos-default-rtdb.firebaseio.com',
+  projectId: 'comedero-gatos',
+  storageBucket: 'comedero-gatos.firebasestorage.app',
+  messagingSenderId: '765299491657',
+  appId: '1:765299491657:web:9258535d9e972f736ed098'
 };
-*/
 window.CODIGO_COMEDERO = 'COMEDERO-4F2A';

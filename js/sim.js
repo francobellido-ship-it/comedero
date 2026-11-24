@@ -516,5 +516,6 @@
     bc.postMessage({ tipo: 'hola', de: yo });
   } catch (e) { /* navegador sin BroadcastChannel */ }
 
+  { const ce = document.getElementById('codigo-equipo'); if (ce) ce.textContent = con.codigo || window.CODIGO_COMEDERO || 'COMEDERO-4F2A'; }
   comedero.arrancar();
 })();

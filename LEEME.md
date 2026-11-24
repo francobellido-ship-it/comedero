@@ -4,7 +4,7 @@ Las dos partes del sistema, igual que en la tesis:
 
 | Página | Qué es | Dónde se usa |
 |---|---|---|
-| `app.html` | **App del dueño.** Primer uso, mis gatos (registro con la cámara), servir ahora, horarios, historial y alertas | Celular (APK o instalada) o PC |
+| `app.html` | **App del dueño.** Cuenta (crear, entrar, Mi cuenta), primer uso, mis gatos (registro con la cámara), servir ahora, horarios, historial y alertas | Celular (APK o instalada) o PC |
 | `comedero.html` | **Comedero simulado** (gemelo digital): ESP32 + ESP32-S3-CAM con tu webcam, panel, mecanismo, fallas y **componentes y pines en vivo** | PC con webcam |
 | `demo.html` | Las dos juntas en una pantalla, para presentar | PC, o celular publicada con https (sección 2.4) |
 | `index.html` | Página de inicio con los tres accesos | — |
@@ -25,7 +25,7 @@ Hay dos formas de conectarlas:
 |---|---|---|
 | **Botón del comedero** (modo local) | Cada toque corto = 12 g (máximo 4 toques = 48 g). Sale 3 s después del último toque | No |
 | **Desde el celular** | Inicio → "Servir ahora" | No |
-| **A sus horas** (modo por horarios) | A cada horario la cámara espera al gato hasta 30 min y le sirve su ración cuando lo reconoce. **Fuera de esas horas la cámara no busca al gato** | Sí |
+| **A sus horas** (modo por horarios) | A cada horario se abre un **tiempo de espera** (30 min). La cámara mira 20 s al empezar (por si el gato ya espera) y luego **duerme**: el PIR la despierta cuando el gato se acerca, y sigue mirando mientras haya movimiento y 30 s más. Cuando lo reconoce, le sirve su ración. Si no llega, la ración queda omitida. **Fuera de esas horas la cámara no busca al gato** | Sí |
 | **Cuando llegue** (modo libre) | Cuando el PIR ve movimiento, la cámara despierta y busca al gato hasta 30 s. Si es un gato registrado y ya pasó el tiempo mínimo (2 h por defecto, máximo 4 al día), le sirve. Si vuelve antes, no le sirve y lo anota en el historial | Sí |
 
 El modo (horarios o libre) se elige en la app: en Inicio ("¿Cuándo come?"), en Ajustes o en el último paso del primer uso.
@@ -39,14 +39,15 @@ Para comprobar que la cámara reconoce a tu gato sin que salga comida: **Mis gat
 ## 0. Paso a paso: lo que tienes que hacer
 
 **Hoy, en tu computadora (15 minutos)**
-1. Descomprime `Comedero_app_v9.zip`.
+1. Descomprime `Comedero_app_v14.zip`.
 2. Instala VS Code y, dentro de él, la extensión **Live Server**.
 3. Abre la carpeta `comedero_app` en VS Code, haz clic derecho en `index.html` y elige **Open with Live Server**.
 4. Abre **Comedero simulado** y pulsa **Encender webcam** (acepta el permiso).
    - Si estás frente a la cámara, desmarca "Usar el movimiento de la webcam como PIR".
-5. En otra pestaña abre **App del dueño** y sigue el primer uso:
-   - Cuenta y conexión (se conecta sola).
-   - Fondo vacío: deja la zona sin nada y pulsa Registrar.
+5. En otra pestaña abre **App del dueño** y sigue el primer uso, como un cliente:
+   - **Crear cuenta**: nombre, correo y contraseña (mínimo 6 caracteres).
+   - **Conecta tu comedero**: el código de la etiqueta (en la demo está arriba del Panel del equipo: `COMEDERO-4F2A`), tu red Wi-Fi y su contraseña (mínimo 8).
+   - **Prepara la cámara**: la app te muestra lo que ve la cámara. Fondo sin gato: pulsa Registrar.
    - Papel limpio (zona de comida): pulsa Calibrar.
    - En **Mis gatos**, primero el **fondo vacío** (lo que ve la cámara sin gato) y después cada gato: 45 fotos en unos 15 s, moviéndolo un poco.
    - Elige cuándo come (a sus horas o cuando llegue) y Empezar.
@@ -58,13 +59,13 @@ Para comprobar que la cámara reconoce a tu gato sin que salga comida: **Mis gat
 
 **Después, para el celular (30 minutos, sección 2)**
 1. Sube la carpeta a GitHub Pages.
-2. Crea Firebase y pega tu configuración en `js/firebase-config.js`.
+2. Firebase ya está configurado (sección 2.2): solo sube la carpeta a GitHub.
 3. Saca el APK con PWABuilder.
 
 **Para la presentación**
 - Usa `demo.html` (todo en una pantalla) o el comedero en la PC y la app en el celular.
 - Lleva un peluche, o dos con collares de colores si quieres mostrar la excepción de los gatos parecidos.
-- `pruebas/REPORTE_PRUEBAS.md` resume las 130 simulaciones. Sirve para la sección 7.9 (pruebas preliminares).
+- `pruebas/REPORTE_PRUEBAS.md` resume todas las simulaciones. Sirve para la sección 7.9 (pruebas preliminares).
 
 ---
 
@@ -92,16 +93,20 @@ Si prefieres Python: `python -m http.server 8000` dentro de la carpeta y abre `h
    - La app: `https://TUUSUARIO.github.io/comedero/app.html`.
    - El comedero: `https://TUUSUARIO.github.io/comedero/comedero.html`. La webcam también funciona porque es https.
 
-### 2.2 Conectar Firebase (para que el celular hable con la PC)
-1. https://console.firebase.google.com → **Agregar proyecto** (puedes desactivar Analytics).
-2. **Compilación → Realtime Database → Crear base de datos** → elige una ubicación → **Iniciar en modo de prueba**.
-3. **Configuración del proyecto (engranaje) → Tus apps → Web (</>)**. Registra la app y copia el objeto `firebaseConfig`.
-4. Pégalo en `js/firebase-config.js`, en lugar de `window.FIREBASE_CONFIG = null;`. Debe incluir `databaseURL`.
-5. Vuelve a subir ese archivo a GitHub.
+### 2.2 Firebase (ya está configurado)
+Desde la versión 14, `js/firebase-config.js` ya trae el proyecto **comedero-gatos** (cuenta ccusfrancobellido@gmail.com, creado el 24-11-2026):
+- **Realtime Database** en Estados Unidos (us-central1). Reglas: solo se puede leer y escribir en `comederos/COMEDERO-XXXX` (código con esa forma); todo lo demás está cerrado. No vencen como el "modo de prueba".
+- **Authentication** con **correo y contraseña**. Dominios autorizados: `localhost`, `127.0.0.1` y `francobellido-ship-it.github.io`.
 
-Desde entonces, la app (celular) y el comedero (PC) se encuentran por el código `COMEDERO-4F2A`. En "Ajustes → Conexión" de la app dice "Firebase (COMEDERO-4F2A)".
+Qué cambia:
+- `app.html` (celular, o el APK) y `comedero.html` (PC) se encuentran por internet con el código `COMEDERO-4F2A`, aunque estén en lugares distintos. En "Ajustes → Conexión" dice "Firebase (COMEDERO-4F2A)".
+- Las cuentas de `app.html` quedan en la nube: entras desde cualquier celular y "¿Olvidaste tu contraseña?" manda un correo de verdad. Los usuarios se ven en la consola: Authentication → Usuarios.
+- `demo.html` (todo en una pantalla) **no** usa Firebase: funciona igual que antes, sin internet.
+- Sin internet, `app.html` y `comedero.html` vuelven solas al modo de dos pestañas de la misma PC, y la cuenta se guarda en el dispositivo.
 
-El modo de prueba deja la base abierta unos 30 días. Para la versión final se agrega Firebase Authentication con correo y contraseña, como dice la sección 7.5.3.
+Consola del proyecto: https://console.firebase.google.com/project/comedero-gatos (entra con ccusfrancobellido@gmail.com). Ahí puedes ver los datos en vivo: Realtime Database → Datos → `comederos/COMEDERO-4F2A`.
+
+Para la versión final (fuera de la tesis): reglas por dueño (cada comedero solo lo lee la cuenta que lo vinculó).
 
 ### 2.3 Sacar el APK (PWABuilder)
 1. Entra a https://www.pwabuilder.com y pega `https://TUUSUARIO.github.io/comedero/app.html`.
@@ -215,6 +220,14 @@ La leyenda está en "Panel del equipo" y se marca el color actual.
 ### No hay plato: la comida cae sobre el papel
 Como en el prototipo, la comida cae directo sobre el **papel parafinado**, que se desliza sobre la plataforma de acrílico (zona de consumo). La "presentación" mueve el papel para acercar la comida al gato y la **renovación del papel** (motor 2 enrolla, motor 1 acompaña) lleva el papel usado al rodillo B, donde los restos caen al **tacho** y el raspador quita lo pegado. Los dibujos de la app muestran ese mecanismo.
 
+### Tu cuenta (app del dueño)
+- **Crear cuenta:** nombre, correo y contraseña. La app avisa si falta algo, si el correo no es válido, si la contraseña es corta o si las dos no coinciden. "Mostrar" deja ver lo que escribes.
+- **Iniciar sesión / Cerrar sesión / ¿Olvidaste tu contraseña?** y, en Ajustes → **Mi cuenta**: cambiar nombre, cambiar contraseña (pide la actual) y eliminar la cuenta (pide la contraseña).
+- **Conecta tu comedero:** el código de la etiqueta debajo del equipo (forma `COMEDERO-XXXX`) y el Wi-Fi de tu casa. Si el código no es el de tu comedero, la app lo dice.
+- **Varias personas de la casa** pueden crear su cuenta en el mismo celular: entran directo al comedero ya configurado.
+- **Sin Firebase**, la cuenta vive en el dispositivo. La contraseña nunca se guarda: solo su huella PBKDF2-SHA256 con sal. **Con Firebase Authentication**, la cuenta vive en la nube.
+- **"Saltar la configuración (ver la demo sin cuenta)"** sigue disponible para mostrar la demo rápido; el modo presentación entra solo de esa forma.
+
 ### Si el pulsador "no hace nada"
 Mientras hay un ciclo en curso (LED azul) el pulsador corto se ignora, como en la tesis. Ahora la página lo dice debajo del LED ("Pulsador ignorado: …") y muestra qué está haciendo el equipo y cuánto falta. Si el gato ya comió, toca **"Ya terminó de comer"** en la app. En mantenimiento (LED rojo), resuelve la falla y mantén pulsado 3 s o toca "Ya lo resolví".
 
@@ -246,7 +259,7 @@ En `demo.html`, botón **▶ Presentar** arriba a la derecha. Son 9 pasos, unos 
 6. Ver al gato desde lejos.
 7. Atasco: mantenimiento y alertas.
 8. Sin internet.
-9. Cierre: las 237 comprobaciones y las acciones al azar.
+9. Cierre: las 280 comprobaciones y las acciones al azar.
 
 Cada paso muestra abajo un texto para leer en voz alta, resalta en amarillo de qué parte se habla y hace solo lo que hay que mostrar. Avanza con **Siguiente** o con la flecha → del teclado; ◀ vuelve; Esc sale. Si un paso está corriendo, "Saltar" lo detiene y pasa al siguiente.
 
@@ -310,14 +323,17 @@ Diferencias con el equipo real:
 ```
 index.html, app.html, comedero.html, demo.html
 css/app.css
-js/firebase-config.js   ← aquí pegas tu Firebase
+js/firebase-config.js   ← proyecto Firebase comedero-gatos (ya configurado)
 js/comedero.js          ESP32 simulado (lógica, sin pantalla; se prueba con Node)
 js/vision.js            cámara virtual con la webcam (PIR, MobileNet, restos sobre el papel, LED)
 js/nube.js              conexión app ↔ comedero (pestañas o Firebase)
 js/sim.js               pantalla del comedero simulado y pines
 js/app.js               app del dueño
+js/cuenta.js            cuenta del dueño (local o Firebase Authentication)
+js/presentacion.js      modo presentación (9 pasos)
 js/dibujos.js           ilustraciones de la app (mecanismo real: papel, rodillos, raspador y tacho; gato, anillos, avatares)
 manifest.json, sw.js, icon-*.png   para instalarla y sacar el APK
-pruebas/                simulaciones: test_comedero.js (26), test_casos.js (52 + al azar),
-                        test_vision.js (12), test_nube.js (19) y REPORTE_PRUEBAS.md
+pruebas/                simulaciones: test_comedero.js (26), test_casos.js (87 + al azar),
+                        test_vision.js (18), test_nube.js (21), test_cuenta.js (12) y REPORTE_PRUEBAS.md
+pruebas/navegador/      Chrome automático usando la app como un cliente (partes A–G)
 ```

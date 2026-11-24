@@ -364,3 +364,15 @@ body.presentando main.grid { padding-bottom: 220px; }
 .led-leyenda li.on { background: var(--sup2); color: var(--texto); font-weight: 600; box-shadow: inset 0 0 0 1px var(--borde2); }
 
 .banner-fijo { position: sticky; top: 0; z-index: 50; margin: 0; border-radius: 0; text-align: center; }
+
+/* ---------- Cuenta del dueño ---------- */
+.clave-caja { position: relative; display: flex; }
+.clave-caja input { flex: 1; padding-right: 84px; }
+.ver-clave { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); padding: 4px 10px; font-size: 12px; min-height: 0; }
+.centro { text-align: center; margin: 8px 0 0; }
+.volver-cuenta { display: inline-block; margin: 0 0 6px; padding-left: 0; }
+.sub-form { border-top: 1px solid var(--borde, rgba(127,127,127,.25)); margin-top: 10px; padding-top: 8px; }
+.ok-caja { background: rgba(29,158,117,.15); border-color: rgba(29,158,117,.45); color: inherit; }
+.pista { background: rgba(245,197,24,.12); border-radius: 8px; padding: 6px 8px; }
+.etiqueta-codigo { font-size: 12px; opacity: .85; border: 1px dashed currentColor; border-radius: 6px; padding: 2px 8px; margin-left: auto; }
+input:disabled { opacity: .6; }

@@ -81,7 +81,7 @@ class Cliente {
 }
 function firebaseFalso(srv) {
   const cli = new Cliente(srv); const app = { database: () => cli };
-  return { cli, ns: { apps: [], app: () => app, initializeApp: () => { return app; } } };
+  return { cli, ns: { apps: [], app: () => app, initializeApp: () => { return app; }, database: () => app.database() } };
 }
 
 // ---------------- Cámara falsa ----------------
