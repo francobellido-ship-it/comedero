@@ -102,6 +102,8 @@
         this.ref.child(p).on('value', (snap) => {
           const v = snap.val();
           const mia = this.propias().includes(p);
+          // La configuración vacía en la nube (la app aún no la subió) no borra la que ya se tiene
+          if (v === null && (p === 'config' || p === 'comandos')) { if (mia) this.enviados[p] = firma(v); this.listo[p] = true; this.ultimoRecibido = Date.now(); return; }
           if (mia) {
             this.enviados[p] = firma(v);                                   // lo que ya está en la base
             if (this.rol === 'app' && v !== null) this.nube[p] = normal(p, v); // otra copia de la app pudo cambiarlo

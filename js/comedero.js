@@ -133,8 +133,8 @@
         tachoG: 0, vaciadoSim: this.reloj.sim
       };
       this.fallas = { atascoDisco: false, arco: false, atascoPapel: false, papelFlojo: false, inventario: false, sinInternet: false };
-      this.config = clone(this.nube.config);
-      this.gatos = clone(this.nube.gatos);
+      this.config = Object.assign(clone(CONFIG_DEF), this.nube.config ? clone(this.nube.config) : {});
+      this.gatos = Array.isArray(this.nube.gatos) ? clone(this.nube.gatos) : [];
       this.estado = 'INICIO'; this.detalle = '';
       this.alertas = []; this.historial = []; this.eventos = []; this.uart = [];
       this.rx = []; this.lastOK = -1e9; this.lastMovReal = -1e9; this.lastMovSim = -1e9;
@@ -854,8 +854,10 @@
         this.evento(`Conexión recuperada: se enviaron ${this.pendientes} registros pendientes`);
         this.desconectadoDesde = null; this.pendientes = 0;
       }
-      this.config = clone(this.nube.config);
-      this.gatos = clone(this.nube.gatos);
+      // Si la nube aún no tiene configuración (la app todavía no se conectó), se sigue con la última conocida
+      if (this.nube.config && typeof this.nube.config === 'object') this.config = Object.assign(clone(CONFIG_DEF), clone(this.nube.config));
+      if (Array.isArray(this.nube.gatos)) this.gatos = clone(this.nube.gatos);
+      if (!Array.isArray(this.nube.comandos)) this.nube.comandos = [];
       while (this.nube.comandos.length) { const c = this.nube.comandos.shift(); try { this.ejecutar(c); } catch (e) { this._errorInterno(e); } }
       this.nube.estado = this.resumen();
       this.nube.alertas = clone(this.alertas);
