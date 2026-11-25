@@ -30,7 +30,7 @@
     T_TCRT_MAX_S: 2.0,          // Tabla 4.6
     T_CAIDA_S: 0.09,            // Anexo D.11
     T_CAIDA_MAX_S: 1.0,         // Tabla 4.6
-    T_ASENTAR_S: 1.0,           // tras la última porción, la comida termina de caer y se asienta antes de mover el papel
+    T_ASENTAR_S: 2.5,           // tras la última porción, la comida termina de caer por el ducto, rebota y se asienta antes de mover el papel
     CAMARA_TIMEOUT_S: 3,        // Tabla 4.6
     VEL_PAPEL_MM_S: 60,         // sección 5.3.6: 41–92 mm/s → presentación 100 mm ≈ 1.7 s, renovación 360 mm ≈ 6 s
     PRESENTACION_MM: 100,       // sección 5.3.1
@@ -681,6 +681,7 @@
     async servirYCiclo(id, gramos, info) {
       const n = Math.max(1, Math.min(CFG.MAX_PORCIONES, Math.round(gramos / CFG.PORCION_G)));
       this.cicloEnCurso = true;
+      this.comidaActual = { g: n * 12, gato: info.gato ? info.gato.nombre : null };
       this._set('DOSIFICACION', `${n} ${n === 1 ? 'porción' : 'porciones'} (${n * 12} g)` + (info.gato ? ' para ' + info.gato.nombre : ''));
       const d = await this.dosificarRacion(id, n);
       if (!d.ok) { this.cicloEnCurso = false; this.mantenimiento(d.falla); throw new Abortado(); }
@@ -900,6 +901,7 @@
         diasTacho: Math.max(0, Math.floor((this.reloj.sim - this.hw.vaciadoSim) / 86400000)),
         camara: Object.assign({ despierta: this.camaraViva() }, (() => { try { return this.infoCamara ? this.infoCamara() : {}; } catch (e) { return {}; } })()), hora: Math.round(this.reloj.sim),
         cr: this.cr ? this.cr.porciones : 0,
+        comida: this.cicloEnCurso && this.comidaActual ? this.comidaActual : null,
         modo: this.config.modo === 'libre' ? 'libre' : 'horario', prueba: this.prueba,
         viendo: this.verHasta ? Math.max(0, Math.round((this.verHasta - this.reloj.real) / 1000)) : 0,
         vel: this.reloj.vel, horaReal: this.reloj.vel === 1 && Math.abs(this.reloj.sim - Date.now()) < 90000

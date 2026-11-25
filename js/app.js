@@ -12,6 +12,9 @@
   const CTX = window.CTX || {};
   const ROL = CTX.nube ? 'todo' : 'app';
   const CLAVE_APP = 'comedero_app_v2_' + ROL;
+  // Lo técnico (ajustes finos de la visión, tipo de conexión, reiniciar) no lo ve el cliente:
+  // solo aparece en la demo o abriendo app.html?tecnico
+  const TECNICO = ROL === 'todo' || /[?&]tecnico/.test(location.search);
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -100,7 +103,7 @@
     const c = v.caja;
     return `<div class="vista"><img src="${v.jpg}" alt="Lo que ve la cámara del comedero"><span class="en-vivo-tag">EN VIVO</span>` +
       (c ? `<i class="vista-caja" style="left:${c.x * 100}%;top:${c.y * 100}%;width:${c.w * 100}%;height:${c.h * 100}%" data-txt="${esc(v.texto || '')}"></i>` : '') + `</div>` +
-      (compacto ? '' : `<p class="mini">Foto de las ${hms(v.t)} · ${v.kb} KB · ${e.viendo ? `se apaga en ${e.viendo} s` : 'apagándose'}</p>`);
+      (compacto ? '' : `<p class="mini">Imagen de las ${hms(v.t)} · ${e.viendo ? `se apaga en ${e.viendo} s` : 'apagándose'}</p>`);
   }
   function htmlVerGato() {
     if (!viendo()) {
@@ -117,7 +120,7 @@
     return `<div class="tarjeta"><h4>¿Cuándo come?</h4><div class="modos">
       <button data-act="modo" data-m="horario" class="${!lib ? 'on' : ''}"><b>A sus horas</b><span>${c.horarios.join(' · ')}</span></button>
       <button data-act="modo" data-m="libre" class="${lib ? 'on' : ''}"><b>Cuando llegue</b><span>cada ${horas(c.libreIntervaloMin || 120)} como mínimo, hasta ${c.libreMaxDia || 4} al día</span></button></div>
-      <p class="mini">${lib ? 'Cuando tu gato se acerca, la cámara lo reconoce y, si ya pasó el tiempo mínimo, le sirve.' : `A cada hora se abre un tiempo de espera de ${c.esperaMin || 30} min: cuando tu gato se acerca, el sensor de movimiento despierta la cámara, lo reconoce y le sirve.`} También puedes servir aquí abajo o con el botón del comedero (cada toque = 12 g).</p></div>`;
+      <p class="mini">${lib ? 'Cuando tu gato se acerca, la cámara lo reconoce y, si ya pasó el tiempo mínimo, le sirve.' : `En cada horario espero a tu gato hasta ${c.esperaMin || 30} min: cuando se acerca, la cámara lo reconoce y le sirvo su ración.`} También puedes servir aquí abajo o con el botón del comedero (cada toque = 12 g).</p></div>`;
   }
 
   // ======================= VISTAS =======================
@@ -198,17 +201,32 @@
     MANTENIMIENTO: 'Necesito tu ayuda', INICIO: 'Encendiendo', VERIFICACION: 'Revisando el equipo'
   };
   // Etapas de una comida: la app las muestra en orden, aunque alguna dure solo uno o dos segundos
-  const ETAPAS = [
-    ['DOSIFICACION', 'Dispensando', () => '≈ 2–5 s'],
-    ['PRESENTACION', 'Acercando', () => `≈ ${Math.round((CFG.PRESENTACION_MM / CFG.VEL_PAPEL_MM_S) * 10) / 10} s`],
-    ['CONSUMO', 'Comiendo', () => 'hasta que se va'],
-    ['RENOVACION', 'Renovando', () => `≈ ${Math.round(CFG.RENOVACION_MM / CFG.VEL_PAPEL_MM_S)} s`]
-  ];
+  const ETAPAS = [['DOSIFICACION', 'Dispensando'], ['PRESENTACION', 'Acercando'], ['CONSUMO', 'Comiendo'], ['RENOVACION', 'Renovando']];
   function htmlEtapas(est) {
     const i = ETAPAS.findIndex((x) => x[0] === est);
     if (i < 0) return '';
     return `<ol class="etapas" aria-label="Etapas de la comida">${ETAPAS.map((x, j) =>
-      `<li class="${j < i ? 'hecha' : j === i ? 'ahora' : ''}"><b>${j < i ? '✓' : j + 1}</b><span>${x[1]}</span><small>${x[2]()}</small></li>`).join('')}</ol>`;
+      `<li class="${j < i ? 'hecha' : j === i ? 'ahora' : ''}"><b>${j < i ? '✓' : j + 1}</b><span>${x[1]}</span></li>`).join('')}</ol>`;
+  }
+  function subtituloCliente(e) {
+    const cm = e.comida || {}, para = cm.gato ? ' para ' + cm.gato : '', g = cm.g ? cm.g + ' g' : 'la comida';
+    switch (e.estado) {
+      case 'ESPERA': return esLibre() ? 'Modo libre: le sirvo cuando llegue tu gato' : 'Próxima comida a las ' + proximoHorario();
+      case 'INICIO': return 'Encendiendo el comedero';
+      case 'VERIFICACION': return 'Revisando que todo esté listo';
+      case 'RECONOCIMIENTO': {
+        if (/^Prueba/.test(e.detalle || '')) return 'Probando: la cámara mira quién está frente al comedero';
+        if (/^Modo libre/.test(e.detalle || '')) return 'Alguien se acercó: estoy viendo quién es';
+        const m = /Esperando a (.+?) \(hasta las (\d\d:\d\d)\)/.exec(e.detalle || '');
+        return m ? `Es hora de comer. Espero a ${m[1]} hasta las ${m[2]}` : 'Es hora de comer: espero a tu gato';
+      }
+      case 'DOSIFICACION': return `Sirviendo ${g}${para}`;
+      case 'PRESENTACION': return `Acercando la comida${cm.gato ? ' a ' + cm.gato : ''}`;
+      case 'CONSUMO': return /restos/.test(e.detalle || '') ? 'Viendo si quedó comida' : `¡Buen provecho${cm.gato ? ', ' + cm.gato : ''}! Cuando termine y se vaya, limpio el papel solo`;
+      case 'RENOVACION': return 'Limpiando: el papel usado y lo que sobró van al tacho';
+      case 'MANTENIMIENTO': return e.detalle || 'Necesito que revises el comedero';
+      default: return '';
+    }
   }
   function htmlInicio() {
     const e = nube.estado || {};
@@ -217,7 +235,7 @@
     const comidas = (nube.historial || []).filter((h) => ['comida', 'omitida', 'visita'].includes(h.tipo)).slice(0, 4);
     let fecha = new Date(ahoraSim()).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' }); fecha = fecha.charAt(0).toUpperCase() + fecha.slice(1);
     let h = `<div class="saludo-fila"><div><p class="saludo">Hola${nombreDueno() ? ', ' + esc(nombreDueno()) : ''}</p><p class="mini fecha">${esc(fecha)}</p></div>${Dibujos.avatar(nombreDueno() || 'Tú', null, 38)}</div>` + bannerConexion();
-    const sub = e.estado === 'ESPERA' ? (esLibre() ? 'Modo libre: le sirvo cuando llegue tu gato' : 'Próxima comida a las ' + proximoHorario()) : (e.detalle || '');
+    const sub = subtituloCliente(e);
     h += `<div class="hero hero-${led.color}">${Dibujos.escena(e.estado || 'INICIO')}<div class="hero-txt"><span class="punto ${led.parpadeo ? 'parpadeo' : ''}" style="background:${COLOR_LED[led.color] || '#888'}"></span><div><b>${esc(TITULO[e.estado] || 'Conectando…')}</b><div class="mini">${esc(sub)}</div></div></div></div>` + htmlEtapas(e.estado);
     activas.forEach((a) => {
       h += `<div class="alerta ${a.nivel}"><b>${a.nivel === 'falla' ? 'Falla' : 'Aviso'}:</b> ${esc(a.texto)}<br>` +
@@ -243,11 +261,11 @@
     const colorNivel = (p, malo) => (malo ? '#E24B4A' : p <= 25 ? '#EF9F27' : '#1D9E75');
     h += `<div class="anillos">
       <div class="anillo-caja">${Dibujos.anillo(e.nivelPct, colorNivel(e.nivelPct, (e.nivelG || 0) <= 300), (e.nivelPct || 0) + '%')}<b>Alimento</b><span>≈ ${dias(e.diasAlimento)}</span></div>
-      <div class="anillo-caja">${Dibujos.anillo(pctPapel, colorNivel(pctPapel, (e.papelCiclos || 0) === 0), e.papelCiclos != null ? e.papelCiclos : '—')}<b>Papel</b><span>ciclos · ≈ ${dias(e.diasPapel)}</span></div>
+      <div class="anillo-caja">${Dibujos.anillo(pctPapel, colorNivel(pctPapel, (e.papelCiclos || 0) === 0), e.papelCiclos != null ? pctPapel + '%' : '—')}<b>Papel</b><span>≈ ${dias(e.diasPapel)}</span></div>
       <div class="anillo-caja">${Dibujos.anillo(e.tachoPct, (e.tachoPct || 0) >= 100 ? '#E24B4A' : (e.tachoPct || 0) >= 80 ? '#EF9F27' : '#378ADD', (e.tachoPct || 0) + '%')}<b>Tacho</b><span>vaciado hace ${dias(e.diasTacho)}</span></div>
     </div>`;
     const cm = e.camara || {};
-    h += `<div class="chip-cam ${cm.despierta ? 'on' : ''}"><span class="ojo"></span>${cm.pred ? 'La cámara está mirando: ' + esc(cm.pred.mejor) + ' ' + Math.round(cm.pred.p * 100) + ' %' : cm.despierta ? 'Cámara despierta' : 'Cámara dormida: despierta cuando el PIR ve movimiento'}</div>`;
+    h += `<div class="chip-cam ${cm.despierta ? 'on' : ''}"><span class="ojo"></span>${cm.pred ? 'La cámara está mirando: ' + esc(cm.pred.mejor) : cm.despierta ? 'Cámara activa' : 'Cámara en reposo: se activa cuando tu gato se acerca'}</div>`;
     h += `<div class="tarjeta"><h4>Últimas comidas</h4>${comidas.length ? `<div class="linea">${comidas.map(filaHist).join('')}</div>` : '<div class="vacio-txt">' + (esLibre() ? 'Todavía no hay comidas. Cuando tu gato se acerque, la cámara lo reconocerá y le servirá.' : 'Todavía no hay comidas. La primera llegará a las ' + proximoHorario() + '.') + '</div>'}</div>`;
     return h;
   }
@@ -260,8 +278,8 @@
       return `<div class="item omitida">${Dibujos.avatar(x.gato || '?', g && g.collar, 34)}<div class="item-txt"><b>${esc(x.gato || 'Un gato no registrado')} vino${n}</b><div class="t2">${hhmm(x.t)}${x.veces > 1 && x.ultima ? '–' + hhmm(x.ultima) : ''} · ${esc(x.detalle || x.modo)}</div></div><span class="pill-g gris">no se sirvió</span></div>`;
     }
     if (x.tipo === 'omitida') return `<div class="item omitida">${av}<div class="item-txt"><b>${esc(quien)} no vino</b><div class="t2">${hhmm(x.t)} · ${esc(x.modo.replace('Ración omitida: ', ''))}</div></div><span class="pill-g gris">omitida</span></div>`;
-    const plato = x.restos === 'restos' ? `<span class="warn">dejó un poco (${x.restosPct} %)</span>` : x.restos === 'limpio' ? '<span class="ok">comió todo</span>' : x.restos === 'interrumpida' ? 'se interrumpió (corte de luz o falla)' : !x.restos ? 'comiendo…' : 'papel sin revisar';
-    const como = /reconocido/i.test(x.modo) ? `${/Modo libre/.test(x.modo) ? 'llegó solo y ' : ''}la cámara lo reconoció${x.p ? ' (' + Math.round(x.p * 100) + ' %)' : ''}` : esc(x.modo.toLowerCase());
+    const plato = x.restos === 'restos' ? `<span class="warn">dejó un poco</span>` : x.restos === 'limpio' ? '<span class="ok">comió todo</span>' : x.restos === 'interrumpida' ? 'se interrumpió (corte de luz o falla)' : !x.restos ? 'comiendo…' : 'papel sin revisar';
+    const como = /reconocido/i.test(x.modo) ? `${/Modo libre/.test(x.modo) ? 'llegó solo y ' : ''}la cámara lo reconoció` : esc(x.modo.toLowerCase());
     return `<div class="item">${av}<div class="item-txt"><b>${esc(quien)}</b><div class="t2">${hhmm(x.t)} · ${como}</div><div class="t2">${plato}</div></div><span class="pill-g">${x.gramos} g</span></div>`;
   }
 
@@ -303,8 +321,8 @@
         <div class="form-fila"><label for="ng-racion">Ración por comida</label><select id="ng-racion">${[12, 24, 36, 48].map((v) => `<option value="${v}" ${nuevoGato.racionG === v ? 'selected' : ''}>${v} g (${v / 12} ${v === 12 ? 'porción' : 'porciones'})</option>`).join('')}</select></div>
         <p id="ng-error" class="mini mal"></p>
         <button class="primario grande" data-act="agregar" ${fondoOk ? '' : 'disabled'}>Guardar y registrar con la cámara</button>
-        <p class="mini">${fondoOk ? 'La cámara toma 45 fotos en unos 30 segundos (lo que tarda el ESP32-S3), cada una con un recorte distinto. Solo mira la parte que cambió respecto al fondo.' : 'Primero registra el fondo vacío (arriba).'}</p></div>`;
-    } else h += `<p class="mini">El comedero admite hasta 4 gatos (Tabla 4.5).</p>`;
+        <p class="mini">${fondoOk ? 'La cámara toma varias fotos de tu gato en unos 30 segundos. Muévelo un poco para que lo vea desde distintos lados.' : 'Primero registra el fondo vacío (arriba).'}</p></div>`;
+    } else h += `<p class="mini">El comedero admite hasta 4 gatos.</p>`;
     return h;
   }
   function actualizarPrueba() {
@@ -315,7 +333,7 @@
     if (pr && pr.t >= probando.t0 && pr.estado === 'listo') {
       const g = pr.gatoId ? gatoPorId(pr.gatoId) : null;
       html = {
-        gato: `<div class="resultado ok">${Dibujos.avatar(pr.nombre || '?', g && g.collar, 40)}<div><b>¡Te reconocí! Es ${esc(pr.nombre)}</b><div class="mini">Seguridad ${Math.round((pr.p || 0) * 100)} % · 3 fotos seguidas coincidieron${pr.seg ? ` · en ${pr.seg} s (requisito ≤ 5 s)` : ''}</div></div></div>`,
+        gato: `<div class="resultado ok">${Dibujos.avatar(pr.nombre || '?', g && g.collar, 40)}<div><b>¡Te reconocí! Es ${esc(pr.nombre)}</b><div class="mini">La cámara lo reconoció sin problemas.</div></div></div>`,
         otro: `<div class="alerta aviso">Veo un gato, pero no se parece a ninguno registrado. Si es tu gato, toca "Mejorar reconocimiento" y muévelo frente a la cámara.</div>`,
         nadie: `<div class="alerta aviso">No vi a ningún gato en 30 s. Acércalo más a la cámara (que llene el centro), con buena luz.</div>`,
         camara: `<div class="alerta falla">La cámara no respondió.</div>`,
@@ -325,7 +343,7 @@
     else if (cm.sinFondo) html = `<div class="alerta aviso">Falta registrar el fondo vacío.</div>`;
     else if (cm.pred) {
       const N = cm.pred.fotos || 3;
-      html = `<div class="en-vivo"><b>Mirando… veo: ${esc(cm.pred.mejor)} (${Math.round(cm.pred.p * 100)} %)</b><div class="racha">Fotos seguidas que coinciden: ${Array.from({ length: N }, (_, i) => `<i class="${i < cm.pred.racha ? 'on' : ''}"></i>`).join('')}</div><div class="mini">${esc(cm.pred.decision)}</div></div>`;
+      html = `<div class="en-vivo"><b>Mirando… veo: ${esc(cm.pred.mejor)}</b><div class="racha">Confirmando: ${Array.from({ length: N }, (_, i) => `<i class="${i < cm.pred.racha ? 'on' : ''}"></i>`).join('')}</div></div>`;
     } else html = `<p class="mini">Despertando la cámara…</p><div class="progreso"><i style="width:15%"></i></div>`;
     html = imagen + html;
     if (zona.dataset.h !== html) { zona.dataset.h = html; const t = document.createElement('template'); t.innerHTML = html; if (zona.childNodes.length) morfar(zona, t.content); else zona.innerHTML = html; }
@@ -415,15 +433,15 @@
       <div class="fila"><div>Fondo vacío<div class="t2" id="aj-fondo">${inst.fondoOk ? '<span class="ok">Registrado</span>' : 'Sin registrar'}</div></div><button data-act="fondo">Registrar</button></div>
       <div class="fila"><div>Papel limpio (zona de comida)<div class="t2" id="aj-plato">${inst.platoOk ? '<span class="ok">Calibrado</span>' : 'Sin calibrar'}</div></div><button data-act="plato">Calibrar</button></div>
       <p class="mini">Deja la plataforma sin gato ni comida antes de pulsar.</p>
-      <details><summary>Ajustes avanzados de la visión</summary>
+      ${TECNICO ? `<details><summary>Ajustes técnicos de la visión</summary>
         <div class="form-fila"><label>Probabilidad mínima para reconocer</label><select data-act-change="vis" data-k="umbralP">${opt([0.6, 0.7, 0.8, 0.9], v.umbralP)}</select></div>
         <div class="form-fila"><label>Fotos seguidas que deben coincidir</label><select data-act-change="vis" data-k="fotos">${opt([1, 2, 3, 4, 5], v.fotos)}</select></div>
         <div class="form-fila"><label>Sensibilidad del PIR (fracción de la imagen que cambia)</label><select data-act-change="vis" data-k="pirSens">${opt([0.02, 0.04, 0.08, 0.12], v.pirSens)}</select></div>
         <div class="form-fila"><label>Restos: cambio mínimo en el papel</label><select data-act-change="vis" data-k="restosPct">${opt([1, 2, 3, 5, 8], v.restosPct, ' %')}</select></div>
-      </details></div>`;
-    h += `<div class="tarjeta"><h4>Conexión</h4><p class="mini" id="aj-con">${esc(con.texto)}</p>
-      <p class="mini">${con.modo === 'firebase' ? 'La app y el comedero se comunican por Firebase, desde cualquier lugar.' : con.modo === 'pestanas' ? 'La app y el comedero están en la misma computadora. Para usar la app en el celular, conecta Firebase (LEEME, sección 4).' : 'Demo: la app y el comedero simulado están en esta misma página y no usan internet. Para que el celular mande órdenes al comedero de la PC, abre <b>app.html</b> en el celular y <b>comedero.html</b> en la PC.'}</p></div>`;
-    h += `<div class="tarjeta"><h4>Demo</h4><button class="peligro" data-act="reiniciar">Reiniciar la app</button><p class="mini">Borra lo que la app guardó en este navegador.</p></div>`;
+      </details>` : ''}</div>`;
+    h += `<div class="tarjeta"><h4>Conexión</h4><p class="mini" id="aj-con" ${TECNICO ? '' : 'hidden'}>${esc(con.texto)}</p>
+      <p class="mini">${con.modo === 'firebase' ? `Tu comedero ${esc(con.codigo || '')} está conectado por internet: puedes usar la app desde cualquier lugar.` : con.modo === 'pestanas' ? 'La app y el comedero están en la misma computadora. Para usar la app en el celular, conecta Firebase (LEEME, sección 4).' : 'Demo: la app y el comedero simulado están en esta misma página y no usan internet. Para que el celular mande órdenes al comedero de la PC, abre <b>app.html</b> en el celular y <b>comedero.html</b> en la PC.'}</p></div>`;
+    if (TECNICO) h += `<div class="tarjeta"><h4>Demo</h4><button class="peligro" data-act="reiniciar">Reiniciar la app</button><p class="mini">Borra lo que la app guardó en este navegador.</p></div>`;
     return h;
   }
   function htmlMiCuenta() {

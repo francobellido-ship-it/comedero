@@ -147,13 +147,13 @@ Antes, durante el tiempo de espera del horario (30 min) la cámara quedaba encen
 - ✔ La cámara no responde al abrir la ventana: alerta y ración por defecto según el ajuste
 - ✔ La cámara se muere mientras duerme: se detecta cuando el PIR la despierta
 
-### K. Tiempos de cada etapa de la comida (v18)
+### K. Tiempos de cada etapa de la comida (v18–v19)
 
-Franco pidió que se note cada etapa: dispensar toma su tiempo (el disco gira y la comida cae), acercar es un solo movimiento corto de 1 a 2 s y renovar dura 5 a 6 s. El papel va a 60 mm/s (sección 5.3.6: 41–92 mm/s) y, tras la última porción, se espera 1 s a que la comida se asiente antes de mover el papel.
+Franco pidió que se note cada etapa: dispensar toma su tiempo (el disco gira y la comida cae), acercar es un solo movimiento corto de 1 a 2 s y renovar dura 5 a 6 s. El papel va a 60 mm/s (sección 5.3.6: 41–92 mm/s) y, tras la última porción, se esperan 2.5 s a que la comida termine de caer y se asiente antes de mover el papel.
 
-- ✔ 12 g: dispensa 2.1 s · acerca 1.7 s · renueva 6.0 s
-- ✔ 24 g: dispensa 3.2 s · acerca 1.7 s · renueva 6.0 s
-- ✔ 48 g: dispensa 5.4 s · acerca 1.7 s · renueva 6.0 s
+- ✔ 12 g: dispensa 3.6 s · acerca 1.7 s · renueva 6.0 s
+- ✔ 24 g: dispensa 4.7 s · acerca 1.7 s · renueva 6.0 s
+- ✔ 48 g: dispensa 6.9 s · acerca 1.7 s · renueva 6.0 s
 - ✔ Cada cambio de etapa se publica enseguida: la nube ve DOSIFICACION → PRESENTACION → CONSUMO → RENOVACION → ESPERA
 - ✔ En la nube cada comida lleva fecha y hora legibles (`24/11/2026`, `20:26`) y los tiempos van sin decimales
 
@@ -373,6 +373,7 @@ Chrome en tamaño celular (390 × 844, pantalla táctil), desde un navegador lim
 | La demo decía "Comedero conectado" aunque no usa internet, y se confundía con la app conectada a la PC | La barra dice la ruta: "Demo: comedero en esta pantalla", "Conectado por internet" o "Conectado (misma PC)" |
 | La app podía saltarse "Dispensando" o "Acercando" porque duraban 1 a 2 s y el estado salía cada segundo | Cada cambio de etapa sale enseguida a la nube y la app muestra las 4 etapas en orden (✓ las hechas) |
 | En Firebase la hora de cada comida era un número de 13 cifras con decimales | Cada comida lleva `fecha` y `hora` legibles; los tiempos van sin decimales |
+| La app del cliente mostraba datos técnicos (mm, segundos, PIR, % de seguridad, KB, Tabla 4.5, ajustes finos de la visión) | La app usa frases para el dueño ("Sirviendo 24 g para Michi", "Acercando la comida", "Limpiando…"); lo técnico queda en el panel del comedero, en la demo y en `app.html?tecnico` |
 
 
 ## 6. Cómo repetir las pruebas
