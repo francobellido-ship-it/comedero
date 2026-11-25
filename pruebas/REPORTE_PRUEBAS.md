@@ -2,11 +2,11 @@
 
 Fecha: 24/11/2026 (versión 13: cuenta del dueño, registro desde el celular y cámara dormida en la ventana del horario)
 
-**Resultado: 280 de 280 comprobaciones correctas**, sin errores de JavaScript. Además, 900 corridas al azar de la lógica (36 000 acciones) y 7 corridas al azar en Chrome (1 214 acciones de usuario) sin romper ninguna regla.
+**Resultado: 285 de 285 comprobaciones correctas**, sin errores de JavaScript. Además, 900 corridas al azar de la lógica (36 000 acciones) y 7 corridas al azar en Chrome (1 214 acciones de usuario) sin romper ninguna regla.
 
 | Bloque | Casos | Correctos |
 |---|---|---|
-| Lógica del ESP32 (`test_casos.js`) | 87 | 87 |
+| Lógica del ESP32 (`test_casos.js`) | 92 | 92 |
 | Pruebas básicas (`test_comedero.js`) | 26 | 26 |
 | Visión (`test_vision.js`) | 18 | 18 |
 | Conexión app ↔ comedero (`test_nube.js`) | 21 | 21 |
@@ -146,6 +146,16 @@ Antes, durante el tiempo de espera del horario (30 min) la cámara quedaba encen
 - ✔ Mientras haya movimiento sigue mirando (no se apaga a los 30 s)
 - ✔ La cámara no responde al abrir la ventana: alerta y ración por defecto según el ajuste
 - ✔ La cámara se muere mientras duerme: se detecta cuando el PIR la despierta
+
+### K. Tiempos de cada etapa de la comida (v18)
+
+Franco pidió que se note cada etapa: dispensar toma su tiempo (el disco gira y la comida cae), acercar es un solo movimiento corto de 1 a 2 s y renovar dura 5 a 6 s. El papel va a 60 mm/s (sección 5.3.6: 41–92 mm/s) y, tras la última porción, se espera 1 s a que la comida se asiente antes de mover el papel.
+
+- ✔ 12 g: dispensa 2.1 s · acerca 1.7 s · renueva 6.0 s
+- ✔ 24 g: dispensa 3.2 s · acerca 1.7 s · renueva 6.0 s
+- ✔ 48 g: dispensa 5.4 s · acerca 1.7 s · renueva 6.0 s
+- ✔ Cada cambio de etapa se publica enseguida: la nube ve DOSIFICACION → PRESENTACION → CONSUMO → RENOVACION → ESPERA
+- ✔ En la nube cada comida lleva fecha y hora legibles (`24/11/2026`, `20:26`) y los tiempos van sin decimales
 
 ## 2. Visión por computadora
 
@@ -359,13 +369,17 @@ Chrome en tamaño celular (390 × 844, pantalla táctil), desde un navegador lim
 | En el celular, al registrar el fondo o el gato no se veía lo que veía la cámara (estaba en la otra pestaña) | La app muestra la cámara EN VIVO mientras registra, y la enciende o cambia de cámara desde ahí |
 | Después de entrar con tu cuenta, la app volvía a la última pantalla (Ajustes) | Siempre vuelve a Inicio |
 | Si la nube y la cuenta cargaban Firebase a la vez, se podía cargar dos veces | Cada script de Firebase se carga una sola vez |
+| Con la pestaña del comedero en segundo plano (o la PC suspendida), el navegador frenaba el comedero y la app del celular no veía respuesta | El bucle del comedero lo marca un Worker; tras una pausa sigue desde la hora actual |
+| La demo decía "Comedero conectado" aunque no usa internet, y se confundía con la app conectada a la PC | La barra dice la ruta: "Demo: comedero en esta pantalla", "Conectado por internet" o "Conectado (misma PC)" |
+| La app podía saltarse "Dispensando" o "Acercando" porque duraban 1 a 2 s y el estado salía cada segundo | Cada cambio de etapa sale enseguida a la nube y la app muestra las 4 etapas en orden (✓ las hechas) |
+| En Firebase la hora de cada comida era un número de 13 cifras con decimales | Cada comida lleva `fecha` y `hora` legibles; los tiempos van sin decimales |
 
 
 ## 6. Cómo repetir las pruebas
 
 ```
 node pruebas/test_comedero.js      # 26 pruebas básicas
-node pruebas/test_casos.js         # 87 casos + 30 corridas al azar
+node pruebas/test_casos.js         # 92 casos + 30 corridas al azar
 CORRIDAS=150 SEMILLA=777 node pruebas/test_casos.js   # más corridas al azar
 node pruebas/test_vision.js        # 18 casos de visión
 node pruebas/test_nube.js          # 21 casos de conexión (pestañas y Firebase)

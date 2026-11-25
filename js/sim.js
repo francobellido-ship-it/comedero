@@ -48,8 +48,10 @@
     let dt = ahora - ultimo; ultimo = ahora;
     if (dt > 60000) { comedero.reanudarTrasPausa(dt); dt = 50; }
     while (dt > 0) { const d = Math.min(500, dt); dt -= d; pasoEquipo(d); }
-    if (++nLatido % 14 === 0) con.publicar();
+    // Cada cambio de etapa (dispensando → acercando → comiendo → renovando) sale enseguida a la nube
+    if (++nLatido % 14 === 0 || comedero.estado !== estadoPublicado) { estadoPublicado = comedero.estado; con.publicar(); }
   }
+  let estadoPublicado = null;
   try {
     const w = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},50)'], { type: 'text/javascript' })));
     w.onmessage = latido;
@@ -144,7 +146,7 @@
     const d = m >= CFG.LECTURA_MAX_G ? 20 : m <= CFG.ALIMENTO_BAJO_G ? 90 : Math.round(90 - (m - 300) / 10.05);
     const eco = Math.round((2 * d) / 0.343);
     const l298 = (modo, en, a, b) => ({
-      enrollar: `${en} PWM (lazo a 40 mm/s) · ${a} = 1 · ${b} = 0 → enrolla`,
+      enrollar: `${en} PWM (lazo a ${S.CFG.VEL_PAPEL_MM_S} mm/s) · ${a} = 1 · ${b} = 0 → enrolla`,
       soltar: `${en} PWM 88 (frena por PWM) · ${a} = 0 · ${b} = 1 → suelta`,
       freno: `${en} = 1 · ${a} = 1 · ${b} = 1 → freno dinámico`,
       libre: `${en} = 0 → libre`

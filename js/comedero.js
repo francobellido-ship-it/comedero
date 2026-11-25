@@ -30,8 +30,9 @@
     T_TCRT_MAX_S: 2.0,          // Tabla 4.6
     T_CAIDA_S: 0.09,            // Anexo D.11
     T_CAIDA_MAX_S: 1.0,         // Tabla 4.6
+    T_ASENTAR_S: 1.0,           // tras la última porción, la comida termina de caer y se asienta antes de mover el papel
     CAMARA_TIMEOUT_S: 3,        // Tabla 4.6
-    VEL_PAPEL_MM_S: 40,         // sección 5.5.2
+    VEL_PAPEL_MM_S: 60,         // sección 5.3.6: 41–92 mm/s → presentación 100 mm ≈ 1.7 s, renovación 360 mm ≈ 6 s
     PRESENTACION_MM: 100,       // sección 5.3.1
     RENOVACION_MM: 360,
     POS_CAIDA_MM: 230,          // la porción cae junto al rodillo B
@@ -93,7 +94,9 @@
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const pad = (n) => String(n).padStart(2, '0');
   function hhmm(ms) { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  const seg = (mm) => Math.round((mm / CFG.VEL_PAPEL_MM_S) * 10) / 10;
   function fecha(ms) { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function fechaLeible(ms) { const d = new Date(ms); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); }
   function inicioHoy(h, m) { const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); }
   function horaEnDia(ms, hm) { const d = new Date(ms); const [h, m] = hm.split(':').map(Number); d.setHours(h, m, 0, 0); return d.getTime(); }
 
@@ -185,7 +188,10 @@
       if (this.fallas.sinInternet) this.pendientes++;
       return entrada;
     }
-    _set(estado, detalle) { this.estado = estado; this.detalle = detalle || ''; }
+    _set(estado, detalle) {
+      if (estado !== this.estado) this.proxSync = Math.min(this.proxSync || 0, this.reloj.real);
+      this.estado = estado; this.detalle = detalle || '';
+    }
     _vivo(id) { if (id !== this.ciclo) throw new Abortado(); }
 
     async _esperar(cond, segReal, id) {
@@ -686,7 +692,7 @@
       this.registrarRacion();
       this.hw.comidaPos = CFG.POS_CAIDA_MM;
 
-      this._set('PRESENTACION', 'Mueve el papel 100 mm hacia el gato');
+      this._set('PRESENTACION', `Un movimiento corto: el papel avanza ${CFG.PRESENTACION_MM} mm hacia el gato (≈ ${seg(CFG.PRESENTACION_MM)} s)`);
       let m = await this.moverPapel(id, -CFG.PRESENTACION_MM, false);
       if (!m.ok) { this.mantenimiento(m.falla); throw new Abortado(); }
 
@@ -699,7 +705,7 @@
       entrada.restosPct = plato.pct;
       const restosG = plato.estado === 'limpio' ? 1 : Math.round(n * 12 * CFG.RESTOS_FRACCION);
 
-      this._set('RENOVACION', 'Mueve el papel 360 mm hacia el tacho');
+      this._set('RENOVACION', `El papel avanza ${CFG.RENOVACION_MM} mm: el usado y los restos van al tacho (≈ ${seg(CFG.RENOVACION_MM)} s)`);
       m = await this.moverPapel(id, CFG.RENOVACION_MM, true);
       if (!m.ok) { this.mantenimiento(m.falla); throw new Abortado(); }
       this.hw.comidaPos = null; this.cicloEnCurso = false; this.entradaActual = null;
@@ -714,8 +720,10 @@
     async dosificarRacion(id, n) {
       let k = 0, r = 0;
       this.hw.n = n; this.hw.k = 0;
+      const txtPorcion = () => (n > 1 ? `Porción ${k + 1} de ${n}: ` : '');
       while (k < n) {
         this.hw.servo = true;
+        this.detalle = txtPorcion() + 'el disco dosificador gira una vuelta';
         const t0 = this.reloj.real;
         const pulso = await this._esperar(() => !this.fallas.atascoDisco && this.reloj.real - t0 >= CFG.T_VUELTA_S * 1000, CFG.T_TCRT_MAX_S, id);
         this.hw.servo = false;
@@ -729,6 +737,7 @@
         const masa = MASAS_CAVIDAD[this.hw.cavidad % 6];
         const hay = this.hw.tolvaG >= masa && !this.fallas.arco;
         this.hw.cavidad++;
+        this.detalle = txtPorcion() + 'la comida cae sobre el papel';
         const cayo = await this._esperar(() => hay && this.reloj.real - tp >= CFG.T_CAIDA_S * 1000, CFG.T_CAIDA_MAX_S, id);
         if (!cayo) {
           this.evento(`Sin caída en la barrera 1 s después del pulso (porción ${k + 1})` + (r ? '' : '; se reintenta'));
@@ -740,6 +749,10 @@
         this.hw.entG += CFG.PORCION_G;
         k++; r = 0; this.hw.k = k;
       }
+      // La comida termina de caer y rebotar: recién entonces se mueve el papel
+      this.detalle = `${n * 12} g sobre el papel: la comida se asienta`;
+      const ta = this.reloj.real;
+      await this._esperar(() => this.reloj.real - ta >= CFG.T_ASENTAR_S * 1000, CFG.T_ASENTAR_S + 1, id);
       return { ok: true };
     }
 
@@ -750,7 +763,7 @@
       if (m < CFG.LECTURA_MAX_G && Math.abs((this.hw.m0G - m) - this.hw.entG) > CFG.INVENTARIO_TOL_G) this.alerta('inventario', 'aviso');
     }
 
-    // Mover_Papel() — Figura 5.25 (simplificada: avance a 40 mm/s)
+    // Mover_Papel() — Figura 5.25 (simplificada: avance a velocidad constante)
     async moverPapel(id, mm, renovacion) {
       const total = Math.abs(mm), dir = Math.sign(mm);
       const normal = dir > 0 ? 'Renovando: motor 2 enrolla, motor 1 frena por PWM' : 'Presentando: motor 1 enrolla, motor 2 frena por PWM';
@@ -871,8 +884,9 @@
       while (this.nube.comandos.length) { const c = this.nube.comandos.shift(); try { this.ejecutar(c); } catch (e) { this._errorInterno(e); } }
       this.nube.estado = this.resumen();
       this.nube.alertas = clone(this.alertas);
-      this.nube.historial = clone(this.historial);
-      this.nube.ultimaSync = this.reloj.sim;
+      // En la nube cada registro lleva también su fecha y hora legibles (para mirar Firebase a mano)
+      this.nube.historial = this.historial.map((h) => Object.assign(clone(h), { t: Math.round(h.t), fecha: fechaLeible(h.t), hora: hhmm(h.t) }));
+      this.nube.ultimaSync = Math.round(this.reloj.sim);
     }
 
     resumen() {
@@ -884,7 +898,7 @@
         papelCiclos: this.hw.papelCiclos, diasPapel: Math.floor(this.hw.papelCiclos / this.comidasPorDia()),
         tachoG: this.hw.tachoG, tachoPct: Math.min(100, Math.round((this.hw.tachoG / CFG.TACHO_ALARMA_G) * 100)),
         diasTacho: Math.max(0, Math.floor((this.reloj.sim - this.hw.vaciadoSim) / 86400000)),
-        camara: Object.assign({ despierta: this.camaraViva() }, (() => { try { return this.infoCamara ? this.infoCamara() : {}; } catch (e) { return {}; } })()), hora: this.reloj.sim,
+        camara: Object.assign({ despierta: this.camaraViva() }, (() => { try { return this.infoCamara ? this.infoCamara() : {}; } catch (e) { return {}; } })()), hora: Math.round(this.reloj.sim),
         cr: this.cr ? this.cr.porciones : 0,
         modo: this.config.modo === 'libre' ? 'libre' : 'horario', prueba: this.prueba,
         viendo: this.verHasta ? Math.max(0, Math.round((this.verHasta - this.reloj.real) / 1000)) : 0,

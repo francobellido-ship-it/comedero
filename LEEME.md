@@ -106,6 +106,23 @@ Qué cambia:
 
 Consola del proyecto: https://console.firebase.google.com/project/comedero-gatos (entra con ccusfrancobellido@gmail.com). Ahí puedes ver los datos en vivo: Realtime Database → Datos → `comederos/COMEDERO-4F2A`.
 
+**Para qué sirve Firebase:** es la "nube" de la tesis (Tabla 7.6), el punto de encuentro entre el celular y el comedero. El comedero real (ESP32 por Wi-Fi) y el celular nunca se hablan directo: cada uno escribe y lee en Firebase. Así la app funciona desde cualquier lugar, y el historial queda guardado aunque el celular haya estado apagado.
+
+**Qué hay en `comederos/COMEDERO-4F2A`:**
+
+| Rama | La escribe | Qué tiene |
+|---|---|---|
+| `config` | la app | modo (horarios o libre), horarios, tiempos, ajustes de la cámara |
+| `gatos` | la app | cada gato: nombre, ración, collar |
+| `comandos` | la app | órdenes (servir, probar, ver…). Aparecen un instante y desaparecen cuando el comedero las toma |
+| `estado` | el comedero | etapa actual (`estado`, `detalle`), LED, alimento, papel, tacho, cámara |
+| `historial` | el comedero | cada comida: `0` es la más reciente. Abre `historial → 0` y verás `gato`, `gramos`, `fecha`, `hora`, `modo` (horario, ciclo rápido, libre) y `restos` (limpio o restos en el papel) |
+| `alertas` | el comedero | avisos y fallas, con `activa` true o false |
+| `huellas`, `instalacion` | el comedero | gatos registrados en la cámara (sin fotos) y si el fondo está listo |
+| `ultimaSync` | el comedero | hora del último dato (en milisegundos): cambia cada segundo mientras el comedero está encendido |
+
+**Tiempos de una comida (versión 18):** dispensar ≈ 1 s por porción (una vuelta del servo) + 1 s para que la comida se asiente → 2 s para 12 g y 5 s para 48 g; acercar la comida, un solo movimiento corto de 100 mm ≈ 1.7 s; comer, hasta que el gato se va; renovar el papel, 360 mm ≈ 6 s. El papel va a 60 mm/s, dentro del rango de la sección 5.3.6 (41 a 92 mm/s). La app muestra las 4 etapas en orden en Inicio: Dispensando → Acercando → Comiendo → Renovando.
+
 Para la versión final (fuera de la tesis): reglas por dueño (cada comedero solo lo lee la cuenta que lo vinculó).
 
 ### 2.3 Sacar el APK (PWABuilder)
@@ -259,7 +276,7 @@ En `demo.html`, botón **▶ Presentar** arriba a la derecha. Son 9 pasos, unos 
 6. Ver al gato desde lejos.
 7. Atasco: mantenimiento y alertas.
 8. Sin internet.
-9. Cierre: las 280 comprobaciones y las acciones al azar.
+9. Cierre: las 285 comprobaciones y las acciones al azar.
 
 Cada paso muestra abajo un texto para leer en voz alta, resalta en amarillo de qué parte se habla y hace solo lo que hay que mostrar. Avanza con **Siguiente** o con la flecha → del teclado; ◀ vuelve; Esc sale. Si un paso está corriendo, "Saltar" lo detiene y pasa al siguiente.
 

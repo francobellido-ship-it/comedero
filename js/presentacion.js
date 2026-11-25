@@ -106,7 +106,7 @@
     },
     {
       titulo: 'Validado por simulación',
-      texto: '280 comprobaciones correctas: lógica del ESP32 (con 900 corridas al azar), visión, conexión app ↔ comedero, cuenta del dueño, todos los modos y fallas usados como un cliente en el navegador y más de 1 200 acciones al azar sin romper ninguna regla. En el prototipo físico se validan los sensores y la faja.',
+      texto: '285 comprobaciones correctas: lógica del ESP32 (con 900 corridas al azar), visión, conexión app ↔ comedero, cuenta del dueño, todos los modos y fallas usados como un cliente en el navegador y más de 1 200 acciones al azar sin romper ninguna regla. En el prototipo físico se validan los sensores y la faja.',
       foco: [],
       accion: async () => {
         const { comedero } = ctx();

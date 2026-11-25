@@ -260,7 +260,7 @@ async function caso(grupo, nombre, fn) {
     let frenos = 0, antes = false;
     for (let i = 0; i < 3; i++) {
       cam.mov(1500);
-      for (let k = 0; k < 160; k++) { c.tick(50); cam.tick(50); await new Promise((r) => setImmediate(r)); vigilar(c, 'C4'); const f = /Frenados/.test(c.hw.motores); if (f && !antes) frenos++; antes = f; }
+      for (let k = 0; k < 130; k++) { c.tick(50); cam.tick(50); await new Promise((r) => setImmediate(r)); vigilar(c, 'C4'); const f = /Frenados/.test(c.hw.motores); if (f && !antes) frenos++; antes = f; }
     }
     await correr(c, cam, 20, 'C4', enEspera(c));
     return { ok: frenos === 3 && c.hw.papelCiclos === 93, detalle: `${frenos} frenadas` };
@@ -657,6 +657,51 @@ async function caso(grupo, nombre, fn) {
     await correr(c, cam, 20, 'J7', () => c.activa('camara'));
     await correr(c, cam, 20, 'J7', enEspera(c));
     return { ok: c.activa('camara') && omitidas(c).length === 1 && /cámara/.test(omitidas(c)[0].modo) };
+  });
+
+  // ---------------- K. Tiempos de cada etapa (pedido de Franco, 24-nov) ----------------
+  console.log('K. Tiempos de cada etapa de la comida');
+  const medirEtapas = async (c, cam, et, hasta) => {
+    const t = {}; let e = c.estado, t0 = c.reloj.real;
+    for (let i = 0; i < 20 * 120; i++) {
+      c.tick(50); cam.tick(50); await new Promise((r) => setImmediate(r)); vigilar(c, et);
+      if (c.estado !== e) { t[e] = (t[e] || 0) + (c.reloj.real - t0) / 1000; e = c.estado; t0 = c.reloj.real; }
+      if (hasta()) break;
+    }
+    return t;
+  };
+  for (const n of [1, 2, 4]) {
+    await caso('K', `Servir ${n * 12} g desde la app: dispensa (≈ 1 s por porción + 1 s), acerca en 1–2 s, renueva en 5–6.5 s`, async () => {
+      const { c, cam, nube } = await listo('K' + n, { gatos: [['Michi', 12]], config: { consumoSinGatoMin: 1 }, vel: 60 });
+      nube.comandos.push({ tipo: 'servir', porciones: n });
+      await correr(c, cam, 3, 'K' + n, () => c.estado === 'DOSIFICACION');
+      const t = await medirEtapas(c, cam, 'K' + n, enEspera(c));
+      const dos = t.DOSIFICACION || 0, pre = t.PRESENTACION || 0, ren = t.RENOVACION || 0;
+      const ok = dos >= n * 1.0 + 0.9 && dos <= n * 1.2 + 1.3 && pre >= 1 && pre <= 2 && ren >= 5 && ren <= 6.5;
+      return { ok, detalle: `dispensa ${dos.toFixed(1)} s · acerca ${pre.toFixed(1)} s · renueva ${ren.toFixed(1)} s` };
+    });
+  }
+  await caso('K', 'Cada cambio de etapa se publica enseguida (la app ve dispensando → acercando → comiendo → renovando)', async () => {
+    const { c, cam, nube } = await listo('K5', { gatos: [['Michi', 12]], config: { consumoSinGatoMin: 1 }, vel: 60 });
+    nube.comandos.push({ tipo: 'servir', porciones: 1 });
+    const vistos = [];
+    for (let i = 0; i < 20 * 120; i++) {
+      c.tick(50); cam.tick(50); await new Promise((r) => setImmediate(r)); vigilar(c, 'K5');
+      const e = nube.estado && nube.estado.estado; if (e && vistos[vistos.length - 1] !== e) vistos.push(e);
+      if (vistos.length > 2 && e === 'ESPERA') break;
+    }
+    while (vistos[0] === 'ESPERA') vistos.shift();
+    const orden = ['DOSIFICACION', 'PRESENTACION', 'CONSUMO', 'RENOVACION', 'ESPERA'];
+    return { ok: vistos.join() === orden.join(), detalle: vistos.join(' → ') };
+  });
+  await caso('K', 'En la nube cada comida lleva fecha y hora legibles, y los tiempos van sin decimales', async () => {
+    const { c, cam, nube } = await listo('K6', { gatos: [['Michi', 12]], config: { consumoSinGatoMin: 1 }, vel: 60 });
+    nube.comandos.push({ tipo: 'servir', porciones: 1 });
+    await correr(c, cam, 120, 'K6', () => (nube.historial || []).some((h) => h.tipo === 'comida'));
+    await correr(c, cam, 2, 'K6');
+    const h = nube.historial.find((x) => x.tipo === 'comida');
+    const ok = /^\d{2}\/\d{2}\/\d{4}$/.test(h.fecha) && /^\d{2}:\d{2}$/.test(h.hora) && Number.isInteger(h.t) && Number.isInteger(nube.ultimaSync) && h.gramos === 12;
+    return { ok, detalle: `${h.fecha} ${h.hora} · ${h.gramos} g · ${h.modo}` };
   });
 
   // ---------------- G. Pruebas al azar ----------------

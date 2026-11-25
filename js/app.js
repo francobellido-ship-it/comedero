@@ -47,7 +47,7 @@
   const COLOR_LED = { verde: '#3bd16f', azul: '#378add', amarillo: '#f5c518', rojo: '#e24b4a', blanco: '#d3d1c7' };
   const ESTADO_AMIGABLE = {
     INICIO: 'Encendiendo', VERIFICACION: 'Revisando el equipo', ESPERA: 'Listo', RECONOCIMIENTO: 'Esperando a tu gato',
-    DOSIFICACION: 'Sirviendo la comida', PRESENTACION: 'Acercando la comida', CONSUMO: 'Hora de comer',
+    DOSIFICACION: 'Dispensando la comida', PRESENTACION: 'Acercando la comida', CONSUMO: 'Hora de comer',
     RENOVACION: 'Renovando el papel', MANTENIMIENTO: 'Necesita tu ayuda'
   };
   const COLLARES = ['rojo', 'azul', 'amarillo', 'verde'];
@@ -193,10 +193,23 @@
 
   // ---------- Inicio ----------
   const TITULO = {
-    ESPERA: 'Todo listo', RECONOCIMIENTO: 'Esperando a tu gato', DOSIFICACION: 'Sirviendo la comida',
+    ESPERA: 'Todo listo', RECONOCIMIENTO: 'Esperando a tu gato', DOSIFICACION: 'Dispensando la comida',
     PRESENTACION: 'Acercando la comida', CONSUMO: 'Hora de comer', RENOVACION: 'Renovando el papel',
     MANTENIMIENTO: 'Necesito tu ayuda', INICIO: 'Encendiendo', VERIFICACION: 'Revisando el equipo'
   };
+  // Etapas de una comida: la app las muestra en orden, aunque alguna dure solo uno o dos segundos
+  const ETAPAS = [
+    ['DOSIFICACION', 'Dispensando', () => '≈ 2–5 s'],
+    ['PRESENTACION', 'Acercando', () => `≈ ${Math.round((CFG.PRESENTACION_MM / CFG.VEL_PAPEL_MM_S) * 10) / 10} s`],
+    ['CONSUMO', 'Comiendo', () => 'hasta que se va'],
+    ['RENOVACION', 'Renovando', () => `≈ ${Math.round(CFG.RENOVACION_MM / CFG.VEL_PAPEL_MM_S)} s`]
+  ];
+  function htmlEtapas(est) {
+    const i = ETAPAS.findIndex((x) => x[0] === est);
+    if (i < 0) return '';
+    return `<ol class="etapas" aria-label="Etapas de la comida">${ETAPAS.map((x, j) =>
+      `<li class="${j < i ? 'hecha' : j === i ? 'ahora' : ''}"><b>${j < i ? '✓' : j + 1}</b><span>${x[1]}</span><small>${x[2]()}</small></li>`).join('')}</ol>`;
+  }
   function htmlInicio() {
     const e = nube.estado || {};
     const led = e.led || { color: 'verde' };
@@ -205,7 +218,7 @@
     let fecha = new Date(ahoraSim()).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' }); fecha = fecha.charAt(0).toUpperCase() + fecha.slice(1);
     let h = `<div class="saludo-fila"><div><p class="saludo">Hola${nombreDueno() ? ', ' + esc(nombreDueno()) : ''}</p><p class="mini fecha">${esc(fecha)}</p></div>${Dibujos.avatar(nombreDueno() || 'Tú', null, 38)}</div>` + bannerConexion();
     const sub = e.estado === 'ESPERA' ? (esLibre() ? 'Modo libre: le sirvo cuando llegue tu gato' : 'Próxima comida a las ' + proximoHorario()) : (e.detalle || '');
-    h += `<div class="hero hero-${led.color}">${Dibujos.escena(e.estado || 'INICIO')}<div class="hero-txt"><span class="punto ${led.parpadeo ? 'parpadeo' : ''}" style="background:${COLOR_LED[led.color] || '#888'}"></span><div><b>${esc(TITULO[e.estado] || 'Conectando…')}</b><div class="mini">${esc(sub)}</div></div></div></div>`;
+    h += `<div class="hero hero-${led.color}">${Dibujos.escena(e.estado || 'INICIO')}<div class="hero-txt"><span class="punto ${led.parpadeo ? 'parpadeo' : ''}" style="background:${COLOR_LED[led.color] || '#888'}"></span><div><b>${esc(TITULO[e.estado] || 'Conectando…')}</b><div class="mini">${esc(sub)}</div></div></div></div>` + htmlEtapas(e.estado);
     activas.forEach((a) => {
       h += `<div class="alerta ${a.nivel}"><b>${a.nivel === 'falla' ? 'Falla' : 'Aviso'}:</b> ${esc(a.texto)}<br>` +
         (a.nivel === 'falla' ? `<button data-act="confirmar">Ya lo resolví</button>` : `<button data-act="entendido" data-tipo="${a.tipo}">Entendido</button>`) + `</div>`;
