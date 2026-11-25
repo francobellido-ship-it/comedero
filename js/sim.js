@@ -190,7 +190,8 @@
   function setHTML(sel, html) { const el = $(sel); if (!el || cacheHTML.get(sel) === html) return; cacheHTML.set(sel, html); el.innerHTML = html; }
   function renderSim() {
     const c = comedero, hw = c.hw, r = c.reloj;
-    const conTxt = $('#con-texto'); if (conTxt) conTxt.textContent = con.texto + (con.error ? ' · ' + con.error : '');
+    const conTxt = $('#con-texto');
+    if (conTxt) { const t = con.texto + (con.error ? ' · ' + con.error : '') + (con.modo === 'firebase' ? ' · deja esta página abierta y la PC sin suspender' : ''); if (conTxt.textContent !== t) conTxt.textContent = t; }
     const ce = $('#cam-estado'); ce.textContent = ESTADO_CAM[cam.estado] || cam.estado;
     ce.className = 'pill ' + (['DORMIDA', 'APAGADA'].includes(cam.estado) ? 'dormida' : 'despierta');
     $('.video-caja').classList.toggle('dormida', cam.estado === 'DORMIDA');

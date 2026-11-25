@@ -65,6 +65,13 @@
     if (nube.ultimaSync !== syncVisto.v) { syncVisto = { v: nube.ultimaSync, t: performance.now() }; if (nube.ultimaSync) vioComedero = true; }
     return !nube.ultimaSync || performance.now() - syncVisto.t > 3500;
   }
+  // La barra de arriba dice también por dónde llega el comedero: en la demo el comedero está en
+  // esta misma pantalla (no usa internet), con Firebase llega por internet desde la PC.
+  function textoConexion() {
+    if (con.modo === 'local') return 'Demo: comedero en esta pantalla';
+    if (desconectado()) return 'Comedero sin conexión';
+    return con.modo === 'firebase' ? 'Conectado por internet' : 'Conectado (misma PC)';
+  }
   function enviarComando(c, texto) {
     con.enviarComando(c);
     toast(desconectado() ? 'Se enviará cuando el comedero se conecte' : (texto || 'Enviado al comedero'));
@@ -158,7 +165,8 @@
     const est = nube.estado || {};
     const reloj = hhmm(ahoraSim()) + (est.vel > 1 ? ` · ×${est.vel}` : est.horaReal === false ? ' · hora simulada' : '');
     if ($('#tel-hora').textContent !== reloj) $('#tel-hora').textContent = reloj;
-    $('#tel-con').textContent = desconectado() ? 'Comedero sin conexión' : 'Comedero conectado';
+    const tc = textoConexion();
+    if ($('#tel-con').textContent !== tc) $('#tel-con').textContent = tc;
     if (!usuario()) return;
     if (!app.onboarding) { actualizarRegistro(); actualizarFondo(); actualizarBienvenidaDinamica(); return; }
     if (vista === 'inicio' || vista === 'historial') renderApp(false);
@@ -172,14 +180,15 @@
     if (!desconectado()) return '';
     if (!vioComedero) {
       if (con.modo === 'pestanas') return `<div class="banner">Buscando el comedero… Abre <b>comedero.html</b> en otra pestaña de este navegador, o conecta Firebase para usar la app en el celular.</div>`;
-      if (con.modo === 'firebase') return `<div class="banner">Conectado a Firebase. Esperando que el comedero (${esc(con.codigo)}) se encienda.</div>`;
+      if (con.modo === 'firebase') return `<div class="banner">Conectado a Firebase. Esperando que el comedero (${esc(con.codigo)}) se encienda: abre <b>comedero.html</b> en la PC.</div>`;
       return '';
     }
     // En la demo (app y comedero en la misma página) se dice la causa: la falla simulada "Sin internet"
     const demoSinInternet = CTX.comedero && CTX.comedero.fallas && CTX.comedero.fallas.sinInternet;
     return `<div class="banner">El comedero no se conecta desde las ${nube.ultimaSync ? hhmm(nube.ultimaSync) : '—'}. Sigue funcionando con tu configuración y enviará el historial al volver.` +
       (demoSinInternet ? `<br><b>En la demo:</b> está activada la falla "Sin internet" del comedero simulado. Desmárcala en el panel Fallas para reconectar.` :
-        con.modo === 'pestanas' ? '<br>¿Sigue abierta la pestaña del comedero?' : '') + `</div>`;
+        con.modo === 'pestanas' ? '<br>¿Sigue abierta la pestaña del comedero?' :
+        con.modo === 'firebase' ? '<br>¿Sigue abierta la página del comedero en la PC? Si la PC se suspendió, actívala.' : '') + `</div>`;
   }
 
   // ---------- Inicio ----------
@@ -400,7 +409,7 @@
         <div class="form-fila"><label>Restos: cambio mínimo en el papel</label><select data-act-change="vis" data-k="restosPct">${opt([1, 2, 3, 5, 8], v.restosPct, ' %')}</select></div>
       </details></div>`;
     h += `<div class="tarjeta"><h4>Conexión</h4><p class="mini" id="aj-con">${esc(con.texto)}</p>
-      <p class="mini">${con.modo === 'firebase' ? 'La app y el comedero se comunican por Firebase, desde cualquier lugar.' : con.modo === 'pestanas' ? 'La app y el comedero están en la misma computadora. Para usar la app en el celular, conecta Firebase (LEEME, sección 4).' : 'La app y el comedero están en la misma página.'}</p></div>`;
+      <p class="mini">${con.modo === 'firebase' ? 'La app y el comedero se comunican por Firebase, desde cualquier lugar.' : con.modo === 'pestanas' ? 'La app y el comedero están en la misma computadora. Para usar la app en el celular, conecta Firebase (LEEME, sección 4).' : 'Demo: la app y el comedero simulado están en esta misma página y no usan internet. Para que el celular mande órdenes al comedero de la PC, abre <b>app.html</b> en el celular y <b>comedero.html</b> en la PC.'}</p></div>`;
     h += `<div class="tarjeta"><h4>Demo</h4><button class="peligro" data-act="reiniciar">Reiniciar la app</button><p class="mini">Borra lo que la app guardó en este navegador.</p></div>`;
     return h;
   }
@@ -438,6 +447,7 @@
   };
   const notaCuenta = () => (cuenta.modo === 'firebase'
     ? 'Tu cuenta queda en la nube (Firebase): entras desde cualquier celular.'
+    : ROL === 'todo' ? 'En la demo tu cuenta y el comedero quedan solo en este dispositivo. Para usar el celular con el comedero de la PC abre app.html.'
     : 'En esta versión tu cuenta se guarda en este dispositivo. Con Firebase (LEEME, sección 4) queda en la nube.');
   function htmlCuenta() {
     if (!cuentaLista) return `<div class="hero hero-verde">${Dibujos.escena('INICIO')}</div><p class="saludo">Conectando con tu cuenta…</p>`;

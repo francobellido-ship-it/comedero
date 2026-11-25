@@ -1,0 +1,80 @@
+[
+ {
+  "parte": "D",
+  "nombre": "Avisos que quedaban: \"Entendido\" en la app los cierra",
+  "ok": true,
+  "detalle": "{\"e\":\"ESPERA\",\"oc\":false,\"led\":\"verde\",\"det\":\"\",\"alertas\":[]}"
+ },
+ {
+  "parte": "D",
+  "nombre": "Queda poco alimento: aviso amarillo y alerta en la app",
+  "ok": true,
+  "detalle": "alimento_bajo"
+ },
+ {
+  "parte": "D",
+  "nombre": "Rellenar tolva: se quita el aviso",
+  "ok": true,
+  "detalle": ""
+ },
+ {
+  "parte": "D",
+  "nombre": "Rollo por acabarse: aviso amarillo",
+  "ok": true,
+  "detalle": "rollo"
+ },
+ {
+  "parte": "D",
+  "nombre": "Rollo nuevo / Entendido: vuelve el verde",
+  "ok": true,
+  "detalle": "{\"e\":\"ESPERA\",\"oc\":false,\"led\":\"verde\",\"det\":\"\",\"alertas\":[]}"
+ },
+ {
+  "parte": "D",
+  "nombre": "Sensor de nivel desajustado: aviso de inventario",
+  "ok": true,
+  "detalle": "inventario"
+ },
+ {
+  "parte": "D",
+  "nombre": "Cámara no responde: alerta, termina el horario y la alerta se borra al volver",
+  "ok": true,
+  "detalle": ""
+ },
+ {
+  "parte": "D",
+  "nombre": "Sin internet: LED azul intermitente y la app dice la causa",
+  "ok": true,
+  "detalle": "Azul intermitente: sin Wi-Fi, usa la configuración guardada"
+ },
+ {
+  "parte": "D",
+  "nombre": "Sin internet: la orden de la app espera y se cumple al volver",
+  "ok": true,
+  "detalle": ""
+ },
+ {
+  "parte": "D",
+  "nombre": "Corte de energía en plena comida: al volver renueva el papel y queda listo",
+  "ok": true,
+  "detalle": ""
+ },
+ {
+  "parte": "D",
+  "nombre": "Recargar en plena comida: al encender renueva el papel (ciclo a medias)",
+  "ok": true,
+  "detalle": "Ciclo sin terminar al encender: se renueva el papel (Tabla 5.10) | Encendido | El reloj está en la hora real (×1) | Ciclo rápido local: 1 porción | Pulsador: 1 "
+ },
+ {
+  "parte": "D",
+  "nombre": "Recargar en reposo: no renueva el papel sin motivo",
+  "ok": true,
+  "detalle": "Encendido"
+ },
+ {
+  "parte": "D",
+  "nombre": "[D] sin errores de JavaScript",
+  "ok": true,
+  "detalle": ""
+ }
+]

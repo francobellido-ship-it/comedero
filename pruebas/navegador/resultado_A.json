@@ -1,0 +1,50 @@
+[
+ {
+  "parte": "A",
+  "nombre": "Primer uso: cuenta, conexión, fondo, papel, gato y modo; termina en Inicio",
+  "ok": true,
+  "detalle": "{\"act\":true,\"inicio\":true}"
+ },
+ {
+  "parte": "A",
+  "nombre": "Segundo gato (Pancha) registrado y no se confunde con Lulu",
+  "ok": true,
+  "detalle": "{\"n\":45,\"parecidoA\":1,\"parecido\":false,\"sim\":-0.15,\"t\":1795567233429.8997}"
+ },
+ {
+  "parte": "A",
+  "nombre": "Servir 12 g desde la app: ciclo completo con la persona delante",
+  "ok": true,
+  "detalle": "Ciclo rápido · 12 g · LED verde"
+ },
+ {
+  "parte": "A",
+  "nombre": "Pulsador: 2 toques = 24 g y vuelve a verde",
+  "ok": true,
+  "detalle": "24 g"
+ },
+ {
+  "parte": "A",
+  "nombre": "Por horarios: reconoce a Lulu, sirve 24 g, espera a que se vaya y limpia; Pancha queda omitida",
+  "ok": true,
+  "detalle": "Lulu 24 g (Reconocido por la cámara) · Pancha omitida · mientras comía: true"
+ },
+ {
+  "parte": "A",
+  "nombre": "Por horarios con dos gatos: Lulu 24 g y Pancha 36 g, cada una con su ración",
+  "ok": true,
+  "detalle": "comida Pancha 36 g · comida Lulu 24 g"
+ },
+ {
+  "parte": "A",
+  "nombre": "Al final: espera, LED verde, sin alertas",
+  "ok": true,
+  "detalle": "{\"e\":\"ESPERA\",\"oc\":false,\"led\":\"verde\",\"det\":\"\",\"alertas\":[]}"
+ },
+ {
+  "parte": "A",
+  "nombre": "[A] sin errores de JavaScript",
+  "ok": true,
+  "detalle": ""
+ }
+]
