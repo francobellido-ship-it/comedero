@@ -21,3 +21,5 @@ node parteG.js           # cliente nuevo (perfil propio, se puede correr solo)
 node parteF.js 1 7        # semilla 1, 7 minutos
 ```
 Se corren en orden: comparten el perfil del navegador (la parte A registra el fondo y los gatos).
+
+**Ojo con la hora del día:** las partes C y D corren a ×60. Si se lanzan cerca de un horario (07:00, 13:00 o 19:00), el horario se abre en medio de la prueba y algunos pasos fallan sin que sea un error del comedero. En ese caso, córrelas con otra zona horaria, por ejemplo `TZ=Europe/Moscow node parteD.js`.

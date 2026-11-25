@@ -32,7 +32,7 @@
     T_CAIDA_MAX_S: 1.0,         // Tabla 4.6
     T_ASENTAR_S: 2.5,           // tras la última porción, la comida termina de caer por el ducto, rebota y se asienta antes de mover el papel
     CAMARA_TIMEOUT_S: 3,        // Tabla 4.6
-    VEL_PAPEL_MM_S: 60,         // sección 5.3.6: 41–92 mm/s → presentación 100 mm ≈ 1.7 s, renovación 360 mm ≈ 6 s
+    VEL_PAPEL_MM_S: 40,         // consigna del lazo de velocidad (código de la faja); presentación 100 mm ≈ 2.5 s, renovación 360 mm ≈ 9 s (< 2 min)
     PRESENTACION_MM: 100,       // sección 5.3.1
     RENOVACION_MM: 360,
     POS_CAIDA_MM: 230,          // la porción cae junto al rodillo B

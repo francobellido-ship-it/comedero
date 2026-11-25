@@ -56,7 +56,7 @@ const { abrir } = require('./comun.js');
     if (esperaMant) await T.vista('inicio');
     const appAlerta = await T.esperar(() => /Falla:/.test(document.querySelector('#app-vista').textContent), 5000);
     await resolver();
-    const ok = await T.esperar(() => window.comedero.estado === 'ESPERA' && !window.comedero.ocupado, 40000);
+    const ok = await T.esperar(() => window.comedero.estado === 'ESPERA' && !window.comedero.ocupado, 70000); // con el papel a 40 mm/s cada renovación dura ≈ 9 s
     await T.libre();
     const e2 = await T.estado();
     T.ok(`${nombre}: mantenimiento (rojo + alerta en la app) y se recupera`, mant === esperaMant && (!esperaMant || (est.led === 'rojo' && appAlerta)) && ok && e2.led !== 'rojo', `${est.e}/${est.led} → ${e2.e}/${e2.led} ${e2.alertas.join(',')}`);

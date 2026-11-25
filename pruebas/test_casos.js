@@ -671,13 +671,13 @@ async function caso(grupo, nombre, fn) {
     return t;
   };
   for (const n of [1, 2, 4]) {
-    await caso('K', `Servir ${n * 12} g desde la app: dispensa (≈ 1 s por porción + 2.5 s), acerca en 1–2 s, renueva en 5–6.5 s`, async () => {
+    await caso('K', `Servir ${n * 12} g desde la app: dispensa (≈ 1 s por porción + 2.5 s), acerca en ≈ 2.5 s, renueva en ≈ 9 s`, async () => {
       const { c, cam, nube } = await listo('K' + n, { gatos: [['Michi', 12]], config: { consumoSinGatoMin: 1 }, vel: 60 });
       nube.comandos.push({ tipo: 'servir', porciones: n });
       await correr(c, cam, 3, 'K' + n, () => c.estado === 'DOSIFICACION');
       const t = await medirEtapas(c, cam, 'K' + n, enEspera(c));
       const dos = t.DOSIFICACION || 0, pre = t.PRESENTACION || 0, ren = t.RENOVACION || 0;
-      const ok = dos >= n * 1.0 + 2.4 && dos <= n * 1.2 + 2.8 && pre >= 1 && pre <= 2 && ren >= 5 && ren <= 6.5;
+      const ok = dos >= n * 1.0 + 2.4 && dos <= n * 1.2 + 2.8 && pre >= 2.2 && pre <= 3 && ren >= 8.5 && ren <= 9.8;
       return { ok, detalle: `dispensa ${dos.toFixed(1)} s · acerca ${pre.toFixed(1)} s · renueva ${ren.toFixed(1)} s` };
     });
   }

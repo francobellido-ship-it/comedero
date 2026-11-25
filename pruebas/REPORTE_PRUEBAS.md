@@ -149,11 +149,11 @@ Antes, durante el tiempo de espera del horario (30 min) la cámara quedaba encen
 
 ### K. Tiempos de cada etapa de la comida (v18–v19)
 
-Franco pidió que se note cada etapa: dispensar toma su tiempo (el disco gira y la comida cae), acercar es un solo movimiento corto de 1 a 2 s y renovar dura 5 a 6 s. El papel va a 60 mm/s (sección 5.3.6: 41–92 mm/s) y, tras la última porción, se esperan 2.5 s a que la comida termine de caer y se asiente antes de mover el papel.
+Franco pidió que se note cada etapa: dispensar toma su tiempo (el disco gira y la comida cae), acercar es un solo movimiento corto y renovar se nota. Desde la v20 el papel va a 40 mm/s, la consigna del código de la faja (Cap. 5); renovar sigue muy por debajo del requisito de 2 min y, tras la última porción, se esperan 2.5 s a que la comida termine de caer y se asiente antes de mover el papel.
 
-- ✔ 12 g: dispensa 3.6 s · acerca 1.7 s · renueva 6.0 s
-- ✔ 24 g: dispensa 4.7 s · acerca 1.7 s · renueva 6.0 s
-- ✔ 48 g: dispensa 6.9 s · acerca 1.7 s · renueva 6.0 s
+- ✔ 12 g: dispensa 3.6 s · acerca 2.5 s · renueva 9.0 s
+- ✔ 24 g: dispensa 4.7 s · acerca 2.5 s · renueva 9.0 s
+- ✔ 48 g: dispensa 6.9 s · acerca 2.5 s · renueva 9.0 s
 - ✔ Cada cambio de etapa se publica enseguida: la nube ve DOSIFICACION → PRESENTACION → CONSUMO → RENOVACION → ESPERA
 - ✔ En la nube cada comida lleva fecha y hora legibles (`24/11/2026`, `20:26`) y los tiempos van sin decimales
 
