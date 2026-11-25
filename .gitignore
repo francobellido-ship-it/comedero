@@ -1,3 +1,4 @@
 pruebas/navegador/resultado_*.json
 pruebas/navegador/perfil*
 pruebas/resultados_*.json
+pruebas/navegador/*.log
