@@ -420,6 +420,16 @@
       this.reloj.sim = ahora; this.ultimoCheckSim = ahora; this.reloj.vel = 1;
       this.evento('El reloj está en la hora real (×1)');
     }
+    // La página estuvo en pausa (PC suspendida o pestaña congelada): el equipo "estuvo apagado"
+    // ese tiempo. El reloj sigue desde la hora actual y los horarios de ese lapso no se recuperan.
+    reanudarTrasPausa(ms) {
+      this.reloj.real += ms;
+      this.reloj.sim += ms * (this.reloj.vel === 1 ? 1 : 0);
+      if (this.reloj.vel === 1 && Math.abs(this.reloj.sim - Date.now()) > 60000) this.reloj.sim = Date.now();
+      this.ultimoCheckSim = this.reloj.sim;
+      this.reloj._disparar();
+      this.evento(`La página estuvo en pausa ${Math.round(ms / 60000)} min (PC suspendida): el comedero sigue desde ahora`);
+    }
     adelantarMin(m) { this.reloj.saltar(m * 60000); this.ultimoCheckSim = this.reloj.sim; this.evento(`Simulación: el reloj avanza ${m >= 60 ? Math.round(m / 6) / 10 + ' h' : m + ' min'}`); }
     irAlProximoHorario() {
       const s = this.reloj.sim;

@@ -40,10 +40,21 @@
   const gatosConHuella = () => (nube.gatos || []).map((g) => Object.assign({}, g, { huella: (nube.huellas || {})['g' + g.id] || null }));
 
   // ---------- Bucle principal ----------
-  let ultimo = performance.now();
-  setInterval(() => {
+  // Lo marca un Worker (no la página): así el comedero sigue funcionando aunque su pestaña quede
+  // en segundo plano, donde el navegador frena los temporizadores normales a uno por minuto.
+  let ultimo = performance.now(), nLatido = 0;
+  function latido() {
     const ahora = performance.now();
-    const dt = Math.min(500, ahora - ultimo); ultimo = ahora;
+    let dt = ahora - ultimo; ultimo = ahora;
+    if (dt > 60000) { comedero.reanudarTrasPausa(dt); dt = 50; }
+    while (dt > 0) { const d = Math.min(500, dt); dt -= d; pasoEquipo(d); }
+    if (++nLatido % 14 === 0) con.publicar();
+  }
+  try {
+    const w = new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},50)'], { type: 'text/javascript' })));
+    w.onmessage = latido;
+  } catch (e) { setInterval(latido, 50); }
+  function pasoEquipo(dt) {
     con.setOffline(!!comedero.fallas.sinInternet);
     comedero.tick(dt);
     try {
@@ -53,8 +64,7 @@
       cam.tick();
     } catch (e) { console.error(e); }
     try { sonido(); } catch (e) { /* sin audio */ }
-  }, 50);
-  setInterval(() => con.publicar(), 700);
+  }
   setInterval(renderSim, 200);
   // La app ve lo que la cámara tiene de verdad: si una huella se perdió (cambio de red, NaN,
   // versión anterior), se marca como no registrada para que el dueño la vuelva a registrar.
