@@ -23,3 +23,10 @@ window.FIREBASE_CONFIG = {
   appId: '1:765299491657:web:9258535d9e972f736ed098'
 };
 window.CODIGO_COMEDERO = 'COMEDERO-4F2A';
+// Para pruebas: comedero.html?codigo=COMEDERO-XXXX usa otro canal y no toca los datos del equipo real
+(function () {
+  try {
+    var c = new URLSearchParams(location.search).get('codigo');
+    if (c && /^COMEDERO-[0-9A-F]{4}$/.test(c)) window.CODIGO_COMEDERO = c;
+  } catch (e) { /* sin parámetros */ }
+})();
