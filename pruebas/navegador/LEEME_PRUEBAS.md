@@ -23,3 +23,13 @@ node parteF.js 1 7        # semilla 1, 7 minutos
 Se corren en orden: comparten el perfil del navegador (la parte A registra el fondo y los gatos).
 
 **Ojo con la hora del día:** las partes C y D corren a ×60. Si se lanzan cerca de un horario (07:00, 13:00 o 19:00), el horario se abre en medio de la prueba y algunos pasos fallan sin que sea un error del comedero. En ese caso, córrelas con otra zona horaria, por ejemplo `TZ=Europe/Moscow node parteD.js`.
+
+## Fotos reales para la prueba de reconocimiento (imagenes/reales)
+
+Recortes de 640 × 480 de fotos y de un video de tres gatos reales, que se envían al comedero simulado en lugar de la cámara web:
+
+- `g1_tuxedo_a.jpg` y `g1_tuxedo_b.jpg`: gato blanco y negro (una sola foto; la b es otro encuadre).
+- `g2_naranja_a.jpg` (registro) y `g2_naranja_b.jpg` (prueba): gato naranja y blanco, dos fotos distintas.
+- `g3_tricolor_aNN.jpg` (registro, caminando hacia la cámara) y `g3_tricolor_bNN.jpg` (prueba, sobre el tapete): gata tricolor, cuadros del video.
+- `g3_tricolor_movN.jpg`: cuadros movidos (borrosos) del mismo video.
+- `fondo_piso.jpg`: el lugar vacío; `objeto_balanza.jpg`: un objeto que no es un gato.
