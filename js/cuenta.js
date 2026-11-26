@@ -99,7 +99,7 @@
     async salir() { localStorage.removeItem(this.claveSesion); return { ok: true }; }
     async recuperar(correo) {
       const e = REGLAS.correo(correo); if (e) return { ok: false, error: e };
-      return { ok: false, error: 'En esta versión la cuenta vive solo en este dispositivo y no se puede enviar un correo. Si olvidaste la contraseña, toca "Crear cuenta" con otro correo o borra los datos de la app en Ajustes.' };
+      return { ok: false, error: 'Por ahora la cuenta vive solo en este dispositivo y no se puede enviar un correo. Si olvidaste la contraseña, toca "Crear cuenta" con otro correo o borra los datos de la app en Ajustes.' };
     }
     async cambiarNombre(nombre) {
       const e = REGLAS.nombre(nombre); if (e) return { ok: false, error: e };

@@ -479,7 +479,7 @@
   const notaCuenta = () => (cuenta.modo === 'firebase'
     ? 'Tu cuenta queda en la nube (Firebase): entras desde cualquier celular.'
     : ROL === 'todo' ? 'En la demo tu cuenta y el comedero quedan solo en este dispositivo. Para usar el celular con el comedero de la PC abre app.html.'
-    : 'En esta versión tu cuenta se guarda en este dispositivo. Con Firebase (LEEME, sección 4) queda en la nube.');
+    : 'Por ahora tu cuenta se guarda en este dispositivo. Con Firebase (LEEME, sección 4) queda en la nube.');
   function htmlCuenta() {
     if (!cuentaLista) return `<div class="hero hero-verde">${Dibujos.escena('INICIO')}</div><p class="saludo">Conectando con tu cuenta…</p>`;
     const err = errCuenta ? `<p class="mini mal" id="cuenta-error" role="alert">${esc(errCuenta)}</p>` : '<p class="mini mal" id="cuenta-error" role="alert"></p>';
