@@ -123,10 +123,11 @@
     log(t) { this.mensajes.unshift(t); if (this.mensajes.length > 6) this.mensajes.pop(); }
 
     // ---------- Webcam ----------
-    async encender() {
+    // streamExterno: para presentar sin gatos, js/fotos_prueba.js pasa un video hecho con fotos reales
+    async encender(streamExterno) {
       if (this.webcam) return true;
       try {
-        this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: this.trasera ? 'environment' : 'user' }, audio: false });
+        this.stream = streamExterno || await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: this.trasera ? 'environment' : 'user' }, audio: false });
         this.video.srcObject = this.stream;
         await this.video.play();
         this.webcam = true;
